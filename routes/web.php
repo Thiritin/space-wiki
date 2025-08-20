@@ -16,19 +16,16 @@ Route::get('/', function () {
     return redirect()->route('login');
 })->name('dashboard');
 
-// Public wiki assets (images, etc.) - no auth required
-Route::prefix('wiki')->name('wiki.')->group(function () {
-    Route::get('/fetch', ImageController::class)->name('fetch');
-});
-
-// DokuWiki compatibility endpoints - no auth required
-Route::get('/lib/exe/detail.php', [ImageController::class, 'detail'])->name('dokuwiki.detail');
-Route::get('/lib/exe/fetch.php', ImageController::class)->name('dokuwiki.fetch');
 
 Route::middleware(['auth'])->group(function () {
+    // DokuWiki compatibility endpoints 
+    Route::get('/lib/exe/detail.php', [ImageController::class, 'detail'])->name('dokuwiki.detail');
+    Route::get('/lib/exe/fetch.php', ImageController::class)->name('dokuwiki.fetch');
     
     // Wiki routes
     Route::prefix('wiki')->name('wiki.')->group(function () {
+        // Images
+        Route::get('/fetch', ImageController::class)->name('fetch');
         Route::get('/', [WikiController::class, 'index'])->name('index');
         Route::get('/attachments/{namespace?}', [WikiController::class, 'attachments'])->name('attachments');
         Route::get('/{page}/history', [WikiController::class, 'history'])->name('history');
