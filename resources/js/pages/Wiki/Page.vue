@@ -421,7 +421,7 @@ function addToRecentPages() {
                     <!-- Desktop layout -->
                     <div class="hidden sm:flex items-center justify-between mb-4">
                         <div class="flex-1">
-                            <h1 class="text-3xl font-bold text-gray-900">
+                            <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">
                                 {{ getPageTitle(props.page, props.extractedTitle) }}
                             </h1>
                             <!-- Search bar for team:index (dashboard) -->
@@ -475,7 +475,7 @@ function addToRecentPages() {
 
                     <!-- Mobile layout -->
                     <div class="sm:hidden mb-4">
-                        <h1 class="text-2xl font-bold text-gray-900 mb-3">
+                        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">
                             {{ getPageTitle(props.page, props.extractedTitle) }}
                         </h1>
                         <!-- Search bar for team:index (dashboard) -->
@@ -528,9 +528,9 @@ function addToRecentPages() {
                 </div>
 
                 <!-- Error Alert -->
-                <div v-if="props.error" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-md flex items-center gap-2">
-                    <AlertCircle class="h-5 w-5 text-red-500" />
-                    <span class="text-red-700">{{ props.error }}</span>
+                <div v-if="props.error" class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md flex items-center gap-2">
+                    <AlertCircle class="h-5 w-5 text-red-500 dark:text-red-400" />
+                    <span class="text-red-700 dark:text-red-300">{{ props.error }}</span>
                 </div>
 
                 <!-- Main Content with Sidebar -->
@@ -745,42 +745,42 @@ function addToRecentPages() {
                     </div>
 
                     <!-- Page Information -->
-                    <Card v-if="props.pageInfo" class="bg-gray-50">
+                    <Card v-if="props.pageInfo" class="bg-gray-50 dark:bg-gray-800/50">
                         <CardContent class="p-4">
-                            <h3 class="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
+                            <h3 class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
                                 <FileText class="h-4 w-4" />
                                 Page Information
                             </h3>
                             
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                                 <div class="flex items-center gap-2">
-                                    <Calendar class="h-4 w-4 text-gray-500" />
+                                    <Calendar class="h-4 w-4 text-gray-500 dark:text-gray-400" />
                                     <div>
-                                        <div class="text-gray-600">Last Modified</div>
+                                        <div class="text-gray-600 dark:text-gray-400">Last Modified</div>
                                         <div class="font-medium">{{ formatDate(props.pageInfo.lastModified) }}</div>
                                     </div>
                                 </div>
 
                                 <div class="flex items-center gap-2">
-                                    <User class="h-4 w-4 text-gray-500" />
+                                    <User class="h-4 w-4 text-gray-500 dark:text-gray-400" />
                                     <div>
-                                        <div class="text-gray-600">Author</div>
+                                        <div class="text-gray-600 dark:text-gray-400">Author</div>
                                         <div class="font-medium">{{ props.pageInfo.author || 'Unknown' }}</div>
                                     </div>
                                 </div>
 
                                 <div class="flex items-center gap-2">
-                                    <FileText class="h-4 w-4 text-gray-500" />
+                                    <FileText class="h-4 w-4 text-gray-500 dark:text-gray-400" />
                                     <div>
-                                        <div class="text-gray-600">Version</div>
+                                        <div class="text-gray-600 dark:text-gray-400">Version</div>
                                         <div class="font-medium">{{ props.pageInfo.version || 'N/A' }}</div>
                                     </div>
                                 </div>
 
                                 <div class="flex items-center gap-2">
-                                    <FileText class="h-4 w-4 text-gray-500" />
+                                    <FileText class="h-4 w-4 text-gray-500 dark:text-gray-400" />
                                     <div>
-                                        <div class="text-gray-600">Size</div>
+                                        <div class="text-gray-600 dark:text-gray-400">Size</div>
                                         <div class="font-medium">{{ formatFileSize(props.pageInfo.size) }}</div>
                                     </div>
                                 </div>
@@ -800,6 +800,10 @@ function addToRecentPages() {
     font-size: 16px;
 }
 
+.dark .wiki-content {
+    color: #e5e7eb;
+}
+
 /* Typography */
 .wiki-content h1 {
     font-size: 2.5rem;
@@ -809,6 +813,11 @@ function addToRecentPages() {
     line-height: 1.2;
     border-bottom: 3px solid #e5e7eb;
     padding-bottom: 0.5rem;
+}
+
+.dark .wiki-content h1 {
+    color: #f9fafb;
+    border-bottom-color: #374151;
 }
 
 .wiki-content h2 {
@@ -821,12 +830,21 @@ function addToRecentPages() {
     padding-bottom: 0.25rem;
 }
 
+.dark .wiki-content h2 {
+    color: #f3f4f6;
+    border-bottom-color: #4b5563;
+}
+
 .wiki-content h3 {
     font-size: 1.5rem;
     font-weight: 600;
     color: #1f2937;
     margin: 1.5rem 0 0.75rem 0;
     line-height: 1.4;
+}
+
+.dark .wiki-content h3 {
+    color: #e5e7eb;
 }
 
 .wiki-content h4 {
@@ -837,6 +855,10 @@ function addToRecentPages() {
     line-height: 1.4;
 }
 
+.dark .wiki-content h4 {
+    color: #e5e7eb;
+}
+
 .wiki-content h5 {
     font-size: 1.125rem;
     font-weight: 600;
@@ -845,12 +867,20 @@ function addToRecentPages() {
     line-height: 1.4;
 }
 
+.dark .wiki-content h5 {
+    color: #d1d5db;
+}
+
 .wiki-content h6 {
     font-size: 1rem;
     font-weight: 600;
     color: #374151;
     margin: 1rem 0 0.5rem 0;
     line-height: 1.4;
+}
+
+.dark .wiki-content h6 {
+    color: #d1d5db;
 }
 
 /* Paragraphs and text */
@@ -910,6 +940,18 @@ function addToRecentPages() {
     color: #7c3aed;
 }
 
+.dark .wiki-content a {
+    color: #60a5fa;
+}
+
+.dark .wiki-content a:hover {
+    color: #93c5fd;
+}
+
+.dark .wiki-content a:visited {
+    color: #a78bfa;
+}
+
 /* Tables */
 .wiki-content table {
     width: 100%;
@@ -921,12 +963,22 @@ function addToRecentPages() {
     box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
 }
 
+.dark .wiki-content table {
+    background: #1f2937;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3);
+}
+
 .wiki-content th,
 .wiki-content td {
     border: 1px solid #e5e7eb;
     padding: 0.875rem 1rem;
     text-align: left;
     vertical-align: top;
+}
+
+.dark .wiki-content th,
+.dark .wiki-content td {
+    border-color: #4b5563;
 }
 
 /* Mobile/Tablet: Allow horizontal scroll via JavaScript wrapper */
@@ -961,12 +1013,18 @@ function addToRecentPages() {
     border-bottom: 2px solid #d1d5db;
 }
 
+.dark .wiki-content th {
+    background-color: #374151;
+    color: #e5e7eb;
+    border-bottom-color: #6b7280;
+}
+
 .wiki-content tr:nth-child(even) {
     background-color: #f9fafb;
 }
 
-.wiki-content tr:hover {
-    background-color: #f3f4f6;
+.dark .wiki-content tr:nth-child(even) {
+    background-color: #374151;
 }
 
 /* Code */
@@ -980,6 +1038,12 @@ function addToRecentPages() {
     border: 1px solid #e2e8f0;
 }
 
+.dark .wiki-content code {
+    background-color: #374151;
+    color: #d1d5db;
+    border-color: #4b5563;
+}
+
 .wiki-content pre {
     background-color: #1e293b;
     color: #e2e8f0;
@@ -989,6 +1053,11 @@ function addToRecentPages() {
     margin: 1.5rem 0;
     line-height: 1.5;
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.dark .wiki-content pre {
+    background-color: #111827;
+    color: #f3f4f6;
 }
 
 .wiki-content pre code {
@@ -1008,6 +1077,12 @@ function addToRecentPages() {
     border-radius: 0 0.5rem 0.5rem 0;
     font-style: italic;
     color: #1e40af;
+}
+
+.dark .wiki-content blockquote {
+    background-color: #1e3a8a;
+    color: #93c5fd;
+    border-left-color: #60a5fa;
 }
 
 .wiki-content blockquote p {
@@ -1066,16 +1141,31 @@ function addToRecentPages() {
     color: #1e40af;
 }
 
+.dark .wiki-content .info {
+    background-color: #1e3a8a;
+    color: #93c5fd;
+}
+
 .wiki-content .warning {
     background-color: #fef3cd;
     border-color: #f59e0b;
     color: #92400e;
 }
 
+.dark .wiki-content .warning {
+    background-color: #92400e;
+    color: #fbbf24;
+}
+
 .wiki-content .tip {
     background-color: #f0fdf4;
     border-color: #10b981;
     color: #065f46;
+}
+
+.dark .wiki-content .tip {
+    background-color: #065f46;
+    color: #34d399;
 }
 
 /* Mobile responsive adjustments */
