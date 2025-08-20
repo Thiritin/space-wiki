@@ -83,7 +83,4 @@ Artisan::command('wiki:stats', function (WikiContentService $wikiContentService)
 })->purpose('Display wiki database and search index statistics');
 
 Schedule::command('wiki:sync-updates')
-    ->everyMinute()
-    ->withoutOverlapping()
-    ->runInBackground()
-    ->emailOutputOnFailure(config('mail.from.address'));
+    ->everyMinute();
