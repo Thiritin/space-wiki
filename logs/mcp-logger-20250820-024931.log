@@ -1,0 +1,33 @@
+2025-08-20T02:49:31.176+0200	[34mINFO[0m	Loaded configuration from .env file
+2025-08-20T02:49:31.176+0200	[34mINFO[0m	Loading configuration from: /home/martin/projects/db-mcp-server/config.json
+2025-08-20T02:49:31.177+0200	[34mINFO[0m	Using database configuration from: /home/martin/projects/db-mcp-server/config.json
+2025-08-20T02:49:31.179+0200	[33mWARN[0m	Warning: Failed to initialize database: failed to connect to databases: failed to connect to database cypto_payment_db: failed to ping database: Error 1045 (28000): Access denied for user 'crypto_payment_user'@'172.25.0.1' (using password: YES)
+2025-08-20T02:49:31.179+0200	[34mINFO[0m	Detected 2 database connections: [mysql1 cypto_payment_db]
+2025-08-20T02:49:31.179+0200	[34mINFO[0m	Will dynamically generate database tools for each connection
+2025-08-20T02:49:31.179+0200	[34mINFO[0m	Found 2 database connections for tool registration: [mysql1 cypto_payment_db]
+2025-08-20T02:49:31.179+0200	[34mINFO[0m	Registering tools for database mysql1
+2025-08-20T02:49:31.179+0200	[31mERROR[0m	Error registering tools for database mysql1: failed to get database info for mysql1: failed to get database: database connection mysql1 not found
+2025-08-20T02:49:31.179+0200	[34mINFO[0m	Registering tools for database cypto_payment_db
+2025-08-20T02:49:31.179+0200	[31mERROR[0m	Error registering tools for database cypto_payment_db: failed to get database info for cypto_payment_db: failed to get database: database connection cypto_payment_db not found
+2025-08-20T02:49:31.179+0200	[34mINFO[0m	Registering tool 'list_databases' of type 'list_databases' (database: )
+2025-08-20T02:49:31.179+0200	[34mINFO[0m	Successfully registered tool list_databases
+2025-08-20T02:49:31.179+0200	[33mWARN[0m	Warning: error registering tools: errors occurred while registering tools for 2 databases
+2025-08-20T02:49:31.179+0200	[34mINFO[0m	Registering mock tools as fallback due to error...
+2025-08-20T02:49:31.179+0200	[34mINFO[0m	Registering mock tools
+2025-08-20T02:49:31.179+0200	[34mINFO[0m	Finished registering tools
+2025-08-20T02:49:31.179+0200	[34mINFO[0m	Available database tools:
+2025-08-20T02:49:31.179+0200	[34mINFO[0m	  Database mysql1:
+2025-08-20T02:49:31.179+0200	[34mINFO[0m	    - query_mysql1: Execute SQL queries
+2025-08-20T02:49:31.179+0200	[34mINFO[0m	    - execute_mysql1: Execute SQL statements
+2025-08-20T02:49:31.179+0200	[34mINFO[0m	    - transaction_mysql1: Manage transactions
+2025-08-20T02:49:31.179+0200	[34mINFO[0m	    - performance_mysql1: Analyze query performance
+2025-08-20T02:49:31.179+0200	[34mINFO[0m	    - schema_mysql1: Get database schema
+2025-08-20T02:49:31.179+0200	[34mINFO[0m	  Database cypto_payment_db:
+2025-08-20T02:49:31.179+0200	[34mINFO[0m	    - query_cypto_payment_db: Execute SQL queries
+2025-08-20T02:49:31.179+0200	[34mINFO[0m	    - execute_cypto_payment_db: Execute SQL statements
+2025-08-20T02:49:31.179+0200	[34mINFO[0m	    - transaction_cypto_payment_db: Manage transactions
+2025-08-20T02:49:31.179+0200	[34mINFO[0m	    - performance_cypto_payment_db: Analyze query performance
+2025-08-20T02:49:31.179+0200	[34mINFO[0m	    - schema_cypto_payment_db: Get database schema
+2025-08-20T02:49:31.179+0200	[34mINFO[0m	  Common tools:
+2025-08-20T02:49:31.179+0200	[34mINFO[0m	    - list_databases: List all available databases
+2025-08-20T02:49:31.179+0200	[34mINFO[0m	Created default session: default-session
