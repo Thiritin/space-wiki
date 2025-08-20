@@ -61,7 +61,13 @@ const searchQuery = ref('');
 
 function performSearch() {
     if (searchQuery.value.trim()) {
-        router.get(route('wiki.search'), { q: searchQuery.value });
+        // Emit event to open search widget with pre-filled query
+        window.dispatchEvent(new CustomEvent('open-search-widget', { 
+            detail: { query: searchQuery.value } 
+        }));
+    } else {
+        // Open search widget without query
+        window.dispatchEvent(new CustomEvent('open-search-widget'));
     }
 }
 
@@ -233,7 +239,10 @@ function toggleFavorite() {
 function getPageTitle(page: string | undefined | null, extractedTitle?: string): string {
     // Use extracted title if available
     if (extractedTitle) {
-        return extractedTitle;
+        // Decode HTML entities (e.g., &#039; becomes ')
+        const textarea = document.createElement('textarea');
+        textarea.innerHTML = extractedTitle;
+        return textarea.value;
     }
     
     if (!page) return 'Unknown Page';

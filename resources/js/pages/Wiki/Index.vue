@@ -49,7 +49,13 @@ const showAllPages = ref(false);
 
 function performSearch() {
     if (searchQuery.value.trim()) {
-        router.get(route('wiki.search'), { q: searchQuery.value });
+        // Emit event to open search widget with pre-filled query
+        window.dispatchEvent(new CustomEvent('open-search-widget', { 
+            detail: { query: searchQuery.value } 
+        }));
+    } else {
+        // Open search widget without query
+        window.dispatchEvent(new CustomEvent('open-search-widget'));
     }
 }
 
@@ -176,8 +182,7 @@ function getPageTitle(page: Page): string {
                             Start Page
                         </Button>
                         <Button
-                            as="a"
-                            :href="route('wiki.search')"
+                            @click="() => window.dispatchEvent(new CustomEvent('open-search-widget'))"
                             variant="outline"
                             class="h-16 flex flex-col items-center justify-center"
                         >

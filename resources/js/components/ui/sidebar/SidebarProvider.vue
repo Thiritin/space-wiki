@@ -39,7 +39,8 @@ function setOpenMobile(value: boolean) {
 
 // Helper to toggle the sidebar.
 function toggleSidebar() {
-  return isMobile.value ? setOpenMobile(!openMobile.value) : setOpen(!open.value)
+  // On desktop, keep sidebar always open. Only allow toggle on mobile.
+  return isMobile.value ? setOpenMobile(!openMobile.value) : null
 }
 
 useEventListener('keydown', (event: KeyboardEvent) => {
@@ -51,11 +52,21 @@ useEventListener('keydown', (event: KeyboardEvent) => {
 
 // We add a state so that we can do data-state="expanded" or "collapsed".
 // This makes it easier to style the sidebar with Tailwind classes.
-const state = computed(() => open.value ? 'expanded' : 'collapsed')
+// On desktop, sidebar is always expanded. On mobile, use the open state.
+const state = computed(() => {
+  if (isMobile.value) {
+    return openMobile.value ? 'expanded' : 'collapsed'
+  } else {
+    return 'expanded' // Always expanded on desktop
+  }
+})
+
+// Computed open state: always true on desktop, use openMobile on mobile
+const effectiveOpen = computed(() => isMobile.value ? openMobile.value : true)
 
 provideSidebarContext({
   state,
-  open,
+  open: effectiveOpen,
   setOpen,
   isMobile,
   openMobile,

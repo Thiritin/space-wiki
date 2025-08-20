@@ -36,7 +36,7 @@ Artisan::command('wiki:sync-all', function (WikiContentService $wikiContentServi
         $this->error("Wiki sync failed: {$e->getMessage()}");
         return 1;
     }
-})->purpose('Sync all wiki pages to Typesense search index');
+})->purpose('Sync all wiki pages to database and Typesense search index for frontend and search');
 
 Artisan::command('wiki:sync-updates', function (WikiContentService $wikiContentService) {
     $this->info('Starting incremental wiki content sync...');
@@ -65,7 +65,7 @@ Artisan::command('wiki:sync-updates', function (WikiContentService $wikiContentS
         $this->error("Incremental wiki sync failed: {$e->getMessage()}");
         return 1;
     }
-})->purpose('Sync only updated wiki pages to Typesense search index');
+})->purpose('Sync only updated wiki pages to database and Typesense search index for frontend and search');
 
 Artisan::command('wiki:stats', function (WikiContentService $wikiContentService) {
     $this->info('Wiki Search Statistics');
@@ -80,10 +80,10 @@ Artisan::command('wiki:stats', function (WikiContentService $wikiContentService)
             ['Last Sync', $stats['last_sync_human']],
         ]
     );
-})->purpose('Display wiki search index statistics');
+})->purpose('Display wiki database and search index statistics');
 
 Schedule::command('wiki:sync-updates')
-    ->hourly()
+    ->everyMinute()
     ->withoutOverlapping()
     ->runInBackground()
     ->emailOutputOnFailure(config('mail.from.address'));

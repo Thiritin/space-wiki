@@ -119,7 +119,7 @@ class Page extends Model
 
     /**
      * Get subpages of this page dynamically (2 levels deep with indentation)
-     * Returns empty array if there are more than 50 entries to avoid performance issues
+     * Returns empty array if there are more than 100 entries to avoid performance issues
      */
     public function getSubpages(): array
     {
@@ -142,8 +142,8 @@ class Page extends Model
             ->where('page_id', '!=', $this->page_id) // Exclude self
             ->count();
         
-        // If there are more than 50 entries, don't render subpages for performance
-        if ($totalCount > 50) {
+        // If there are more than 100 entries, don't render subpages for performance
+        if ($totalCount > 100) {
             return [
                 '_meta' => [
                     'hidden_due_to_limit' => true,
@@ -327,11 +327,11 @@ class Page extends Model
     private static function extractTitle(string $pageId, string $content): string
     {
         if (preg_match('/^======\s*(.+?)\s*======/m', $content, $matches)) {
-            return trim($matches[1]);
+            return html_entity_decode(trim($matches[1]), ENT_QUOTES | ENT_HTML5, 'UTF-8');
         }
         
         if (preg_match('/^=====\s*(.+?)\s*=====/m', $content, $matches)) {
-            return trim($matches[1]);
+            return html_entity_decode(trim($matches[1]), ENT_QUOTES | ENT_HTML5, 'UTF-8');
         }
         
         $parts = explode(':', $pageId);

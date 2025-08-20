@@ -1,7 +1,7 @@
 # Wiki Search Implementation
 
 ## Overview
-This application now features a complete Algolia-style search system powered by Typesense and Laravel Scout for fast, responsive wiki content search.
+This application features a complete Algolia-style search system powered by Typesense and Laravel Scout for fast, responsive wiki content search, with full database integration for frontend page rendering and navigation.
 
 ## Features
 
@@ -22,13 +22,16 @@ This application now features a complete Algolia-style search system powered by 
 
 ### Backend Components
 
-1. **WikiPage Model** (`app/Models/WikiPage.php`)
+1. **Page Model** (`app/Models/Page.php`)
    - Eloquent model with Scout searchable trait
    - Handles DokuWiki content parsing and indexing
+   - Provides dynamic subpage navigation and hierarchical content structure
+   - Powers frontend page rendering with database-stored content
 
 2. **WikiContentService** (`app/Services/WikiContentService.php`)
-   - Syncs content from DokuWiki to local database
+   - Syncs content from DokuWiki to local database and Typesense search index
    - Smart change detection for efficient updates
+   - Dual-purpose: enables both fast search and direct page rendering from database
 
 3. **ScoutTypesenseEngine** (`app/Services/ScoutTypesenseEngine.php`)
    - Custom Scout engine for Typesense integration
@@ -51,19 +54,19 @@ This application now features a complete Algolia-style search system powered by 
 ## Console Commands
 
 ```bash
-# Full sync of all wiki pages
+# Full sync of all wiki pages to database and search index
 php artisan wiki:sync-all
 
-# Incremental sync (only updated pages)  
+# Incremental sync (only updated pages) to database and search index
 php artisan wiki:sync-updates
 
-# View search statistics
+# View database and search index statistics
 php artisan wiki:stats
 ```
 
 ## Scheduled Tasks
 
-The system automatically syncs updated content every hour via:
+The system automatically syncs updated content to both database and search index every hour via:
 ```php
 Schedule::command('wiki:sync-updates')->hourly()
 ```
@@ -96,11 +99,26 @@ SCOUT_DRIVER=typesense
 4. **Select**: Press Enter or click to open a page
 5. **Advanced**: Use "View all results" for comprehensive search page
 
+## Dual-Purpose Architecture
+
+The wiki sync system serves two main purposes:
+
+1. **Search Index**: Content is indexed in Typesense for fast full-text search capabilities
+2. **Frontend Database**: Page content, metadata, and structure is stored in PostgreSQL for:
+   - Server-side rendering of wiki pages
+   - Hierarchical navigation and breadcrumbs  
+   - 2-level deep subpage display with folder indentation
+   - Advanced filtering and organization
+
+This architecture enables both lightning-fast search and rich frontend experiences without requiring DokuWiki API calls for every page view.
+
 ## Performance
 
-- **Indexed Content**: 122 wiki pages currently indexed
+- **Database Pages**: All wiki content stored locally for instant access
+- **Indexed Content**: 122+ wiki pages currently indexed for search
 - **Search Speed**: Sub-100ms search responses
-- **Update Frequency**: Hourly automatic syncing
+- **Page Load Speed**: Instant loading from database, no API calls
+- **Update Frequency**: Hourly automatic syncing of both database and search index
 - **Smart Caching**: Only updates modified content
 
 ## Future Enhancements

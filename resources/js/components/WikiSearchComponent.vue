@@ -92,12 +92,6 @@ const selectResult = (result: SearchResult) => {
     closeSearch()
 }
 
-const navigateToSearchPage = () => {
-    if (searchQuery.value.trim()) {
-        router.visit(`/wiki/search?q=${encodeURIComponent(searchQuery.value)}`)
-        closeSearch()
-    }
-}
 
 const handleKeydown = (event: KeyboardEvent) => {
     if (!isOpen.value) {
@@ -125,9 +119,8 @@ const handleKeydown = (event: KeyboardEvent) => {
             event.preventDefault()
             if (selectedIndex.value >= 0 && searchResults.value[selectedIndex.value]) {
                 selectResult(searchResults.value[selectedIndex.value])
-            } else {
-                navigateToSearchPage()
             }
+            // Don't close search if no result is selected - keep it open for further searching
             break
     }
 }
@@ -143,14 +136,26 @@ watch(searchQuery, (newQuery) => {
     debouncedSearch(newQuery)
 })
 
+const handleOpenSearchWidget = (event: CustomEvent) => {
+    openSearch()
+    if (event.detail?.query) {
+        nextTick(() => {
+            searchQuery.value = event.detail.query
+            debouncedSearch(event.detail.query)
+        })
+    }
+}
+
 onMounted(() => {
     document.addEventListener('keydown', handleKeydown)
     document.addEventListener('mousedown', handleClickOutside)
+    window.addEventListener('open-search-widget', handleOpenSearchWidget)
 })
 
 onUnmounted(() => {
     document.removeEventListener('keydown', handleKeydown)
     document.removeEventListener('mousedown', handleClickOutside)
+    window.removeEventListener('open-search-widget', handleOpenSearchWidget)
     clearTimeout(searchTimeout)
 })
 

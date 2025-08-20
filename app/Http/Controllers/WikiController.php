@@ -170,49 +170,6 @@ class WikiController extends Controller
         }
     }
 
-    public function search(Request $request)
-    {
-        $query = $request->get('q', '');
-        
-        if (empty($query)) {
-            return Inertia::render('Wiki/Search', [
-                'query' => '',
-                'results' => [],
-                'breadcrumbs' => $this->generateBreadcrumbs('search', 'Search'),
-            ]);
-        }
-
-        try {
-            // Use database search instead of DokuWiki API
-            $results = Page::where('title', 'like', "%{$query}%")
-                ->orWhere('content', 'like', "%{$query}%")
-                ->take(20)
-                ->get()
-                ->map(function ($page) {
-                    return [
-                        'id' => $page->page_id,
-                        'title' => $page->title,
-                        'href' => route('wiki.show', ['page' => $page->page_id]),
-                        'excerpt' => $page->excerpt ?: substr(strip_tags($page->content), 0, 200),
-                        'score' => 1, // Could implement proper scoring later
-                    ];
-                })
-                ->toArray();
-            
-            return Inertia::render('Wiki/Search', [
-                'query' => $query,
-                'results' => $results,
-                'breadcrumbs' => $this->generateBreadcrumbs('search', 'Search'),
-            ]);
-        } catch (\Exception $e) {
-            return Inertia::render('Wiki/Search', [
-                'query' => $query,
-                'error' => 'Search failed. Please try again.',
-                'results' => [],
-                'breadcrumbs' => $this->generateBreadcrumbs('search', 'Search'),
-            ]);
-        }
-    }
 
     public function history(string $page)
     {
@@ -546,6 +503,9 @@ class WikiController extends Controller
             // Extract the title text and strip any HTML tags
             $title = strip_tags($matches[1]);
             
+            // Decode HTML entities (e.g., &#039; becomes ')
+            $title = html_entity_decode($title, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            
             // Remove the first h1 from content
             $contentWithoutH1 = preg_replace($pattern, '', $content, 1);
             
@@ -592,11 +552,11 @@ class WikiController extends Controller
                     $indexPageId = $currentPath . ':index';
                     $pageModel = Page::findByPageId($indexPageId);
                     
-                    if ($pageModel && $pageModel->title) {
+                    if ($pageModel && $pageModel->title && !$this->isGenericTitle($pageModel->title)) {
                         $title = $pageModel->title;
                     } else {
-                        // Fallback to formatted part name
-                        $title = ucfirst(str_replace(['_', '-'], ' ', $part));
+                        // Fallback to intelligent formatting
+                        $title = $this->generateSmartBreadcrumbTitle($currentPath, $part);
                     }
                 }
                 
@@ -619,11 +579,11 @@ class WikiController extends Controller
                 } else {
                     // Try to get title from database
                     $pageModel = Page::findByPageId($currentPath);
-                    if ($pageModel && $pageModel->title) {
+                    if ($pageModel && $pageModel->title && !$this->isGenericTitle($pageModel->title)) {
                         $title = $pageModel->title;
                     } else {
-                        // Fallback to formatted part name
-                        $title = ucfirst(str_replace(['_', '-'], ' ', $part));
+                        // Fallback to intelligent formatting
+                        $title = $this->generateSmartBreadcrumbTitle($currentPath, $part);
                     }
                 }
                 
@@ -709,6 +669,75 @@ class WikiController extends Controller
         $html .= '</div>';
 
         return $html;
+    }
+
+    /**
+     * Check if a title is generic and should not be used for breadcrumbs
+     */
+    private function isGenericTitle(string $title): bool
+    {
+        $genericTitles = ['index', 'main', 'home', 'start', 'default'];
+        return in_array(strtolower(trim($title)), $genericTitles);
+    }
+
+    /**
+     * Generate a smart breadcrumb title based on page path and context
+     */
+    private function generateSmartBreadcrumbTitle(string $fullPath, string $part): string
+    {
+        // Handle EF-specific patterns
+        if (preg_match('/^ef(\d+)$/', $part, $matches)) {
+            return 'EF' . $matches[1];
+        }
+        
+        // Handle EF subpages with better names
+        if (str_starts_with($fullPath, 'ef') && preg_match('/^ef\d+:(.+)/', $fullPath)) {
+            $commonMappings = [
+                'conops' => 'ConOps',
+                'artshow' => 'Art Show',
+                'awareness' => 'Awareness & Inclusion',
+                'charity' => 'Charity',
+                'events' => 'Events',
+                'fursuit_theater' => 'Fursuit Theater',
+                'opening_ceremony' => 'Opening Ceremony',
+                'function_space' => 'Function Space',
+                'gamescorner' => 'Games Corner',
+                'it' => 'IT',
+                'requests' => 'Requests',
+                'merchandise' => 'Merchandise',
+                'programming' => 'Programming',
+                'theming_experience' => 'Theming & Experience',
+                'vr_department' => 'VR Department',
+            ];
+            
+            if (isset($commonMappings[$part])) {
+                return $commonMappings[$part];
+            }
+        }
+        
+        // Handle team namespace
+        if (str_starts_with($fullPath, 'team')) {
+            // For the 'team' part itself, just return 'Teams'
+            if ($part === 'team') {
+                return 'Teams';
+            }
+            
+            $teamMappings = [
+                'it' => 'IT Team',
+                'vr_department' => 'VR Department', 
+                'security' => 'Security Team',
+                'photography' => 'Photography Team',
+                'merchandise' => 'Merchandise Team',
+                'registration' => 'Registration Team',
+            ];
+            
+            if (isset($teamMappings[$part])) {
+                return $teamMappings[$part];
+            }
+        }
+        
+        // Default formatting: capitalize and replace underscores/dashes with spaces
+        return ucfirst(str_replace(['_', '-'], ' ', $part));
     }
 
 }

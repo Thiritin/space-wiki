@@ -3,6 +3,7 @@ import AppContent from '@/components/AppContent.vue';
 import AppShell from '@/components/AppShell.vue';
 import WikiSidebar from '@/components/WikiSidebar.vue';
 import AppSidebarHeader from '@/components/AppSidebarHeader.vue';
+import { useWikiLinkInterceptor } from '@/composables/useWikiLinkInterceptor';
 import type { BreadcrumbItemType } from '@/types';
 
 interface Props {
@@ -12,6 +13,9 @@ interface Props {
 withDefaults(defineProps<Props>(), {
     breadcrumbs: () => [],
 });
+
+// Enable wiki link interception globally
+useWikiLinkInterceptor();
 </script>
 
 <template>
