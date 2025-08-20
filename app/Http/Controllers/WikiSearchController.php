@@ -87,9 +87,49 @@ class WikiSearchController extends Controller
         return substr($content, 0, $length) . '...';
     }
 
+    private function generateContentExcerpt(string $content, array $queryWords, int $maxLength = 200): string
+    {
+        $content = strip_tags($content);
+        $lowerContent = strtolower($content);
+        $bestMatch = null;
+        $bestScore = 0;
+
+        foreach ($queryWords as $word) {
+            if (strlen($word) < 2) continue;
+            
+            $pos = strpos($lowerContent, strtolower($word));
+            if ($pos !== false) {
+                $start = max(0, $pos - 80);
+                $end = min(strlen($content), $pos + strlen($word) + 80);
+                $excerpt = substr($content, $start, $end - $start);
+                
+                $score = substr_count(strtolower($excerpt), strtolower($word));
+                if ($score > $bestScore) {
+                    $bestScore = $score;
+                    $bestMatch = [
+                        'excerpt' => $excerpt,
+                        'needsEllipsis' => $start > 0 || $end < strlen($content)
+                    ];
+                }
+            }
+        }
+
+        if ($bestMatch) {
+            $excerpt = $bestMatch['excerpt'];
+            if ($bestMatch['needsEllipsis']) {
+                $excerpt = '...' . trim($excerpt) . '...';
+            }
+            return $excerpt;
+        }
+
+        return $this->truncateContent($content, $maxLength);
+    }
+
     private function generateHighlights($page, $query): array
     {
-        $queryWords = explode(' ', strtolower($query));
+        $queryWords = array_filter(explode(' ', strtolower(trim($query))), function($word) {
+            return strlen($word) > 1;
+        });
         
         return [
             'title' => [
@@ -97,7 +137,7 @@ class WikiSearchController extends Controller
                 'matchLevel' => $this->getMatchLevel($page->title, $queryWords),
             ],
             'content' => [
-                'value' => $this->highlightText($this->truncateContent($page->content, 150), $queryWords),
+                'value' => $this->highlightText($this->generateContentExcerpt($page->content, $queryWords), $queryWords),
                 'matchLevel' => $this->getMatchLevel($page->content, $queryWords),
             ],
         ];

@@ -99,12 +99,26 @@ class ScoutTypesenseEngine extends Engine
     {
         try {
             $collectionName = $builder->model->searchableAs();
+            
+            // Log the actual search parameters for debugging
+            \Log::info('Typesense search params', [
+                'collection' => $collectionName,
+                'params' => $searchParams,
+                'query' => $builder->query
+            ]);
+            
             $result = $this->client->collections[$collectionName]->documents->search($searchParams);
+            
+            \Log::info('Typesense search result', [
+                'found' => $result['found'] ?? 0,
+                'hits_count' => count($result['hits'] ?? [])
+            ]);
             
             return $result;
         } catch (\Exception $e) {
             \Log::error('Search failed', [
                 'query' => $builder->query,
+                'searchParams' => $searchParams,
                 'error' => $e->getMessage()
             ]);
             
@@ -131,9 +145,12 @@ class ScoutTypesenseEngine extends Engine
 
         $objectIds = collect($results['hits'])->pluck('document.id');
         $objectIdPositions = array_flip($objectIds->toArray());
-
-        return $model->getScoutModelsByIds($builder, $objectIds->values()->all())
-            ->sortBy(function ($model) use ($objectIdPositions) {
+        
+        // Directly query the database with the specific IDs instead of using getScoutModelsByIds
+        $models = $model->whereIn($model->getScoutKeyName(), $objectIds->toArray())->get();
+        
+        // Sort by the original search result order
+        return $models->sortBy(function ($model) use ($objectIdPositions) {
                 return $objectIdPositions[$model->getScoutKey()] ?? 999;
             })->values();
     }

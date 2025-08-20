@@ -181,28 +181,43 @@ return [
         ],
         // 'max_total_results' => env('TYPESENSE_MAX_TOTAL_RESULTS', 1000),
         'model-settings' => [
-            // User::class => [
-            //     'collection-schema' => [
-            //         'fields' => [
-            //             [
-            //                 'name' => 'id',
-            //                 'type' => 'string',
-            //             ],
-            //             [
-            //                 'name' => 'name',
-            //                 'type' => 'string',
-            //             ],
-            //             [
-            //                 'name' => 'created_at',
-            //                 'type' => 'int64',
-            //             ],
-            //         ],
-            //         'default_sorting_field' => 'created_at',
-            //     ],
-            //     'search-parameters' => [
-            //         'query_by' => 'name'
-            //     ],
-            // ],
+            \App\Models\Page::class => [
+                'collection-schema' => [
+                    'fields' => [
+                        [
+                            'name' => 'id',
+                            'type' => 'string',
+                        ],
+                        [
+                            'name' => 'title',
+                            'type' => 'string',
+                        ],
+                        [
+                            'name' => 'content',
+                            'type' => 'string',
+                        ],
+                        [
+                            'name' => 'namespace',
+                            'type' => 'string',
+                            'facet' => true,
+                        ],
+                        [
+                            'name' => 'last_modified',
+                            'type' => 'int64',
+                            'facet' => true,
+                            'sort' => true,
+                        ],
+                        [
+                            'name' => 'url',
+                            'type' => 'string',
+                        ],
+                    ],
+                    'default_sorting_field' => 'last_modified',
+                ],
+                'search-parameters' => [
+                    'query_by' => 'title,content'
+                ],
+            ],
         ],
     ],
 

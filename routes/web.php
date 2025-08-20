@@ -36,7 +36,6 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('api/wiki')->name('api.wiki.')->group(function () {
         Route::get('/search', [WikiSearchController::class, 'search'])->name('search');
         Route::get('/suggest', [WikiSearchController::class, 'suggest'])->name('suggest');
-        Route::get('/subpages', [WikiController::class, 'getSubpages'])->name('subpages');
         Route::get('/debug-teams', [TeamController::class, 'debugTeams'])->name('debug-teams');
         Route::get('/debug-props', function () {
             $middleware = new \App\Http\Middleware\HandleInertiaRequests();

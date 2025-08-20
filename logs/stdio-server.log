@@ -1,0 +1,4 @@
+2025/08/20 06:01:31 Service handler called for tool: mock_list_databases
+2025/08/20 06:01:34 Service handler called for tool: mock_schema
+2025/08/20 06:01:36 Service handler called for tool: mock_query
+2025/08/20 06:01:39 Service handler called for tool: list_databases

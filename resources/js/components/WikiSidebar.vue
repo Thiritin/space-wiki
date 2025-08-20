@@ -11,12 +11,9 @@ import {
     SidebarMenuItem,
     SidebarGroup,
     SidebarGroupLabel,
-    SidebarGroupContent,
-    SidebarMenuSub,
-    SidebarMenuSubItem,
-    SidebarMenuSubButton
+    SidebarGroupContent
 } from '@/components/ui/sidebar';
-import { type NavItem, type TeamNamespace } from '@/types';
+import { type TeamNamespace } from '@/types';
 import { Link, usePage, useForm, router } from '@inertiajs/vue3';
 import { 
     Star, 
@@ -56,10 +53,13 @@ const page = usePage();
 const favorites = ref<Favorite[]>([]);
 const recentlyViewed = ref<WikiPage[]>([]);
 const showTeamSelector = ref(false);
+const showArchivedEFs = ref(false);
 
 // Get teams and user teams from shared props
 const allTeams = computed(() => page.props.teams || []);
 const userTeamsFromProps = computed(() => page.props.userTeams || []);
+const currentEF = computed(() => page.props.currentEF || null);
+const archivedEFs = computed(() => page.props.archivedEFs || []);
 
 // Local reactive copy for drag and drop
 const userTeams = ref<TeamNamespace[]>([]);
@@ -75,14 +75,6 @@ const availableTeams = computed(() =>
     allTeams.value.filter(team => !userTeamNames.value.includes(team.name))
 );
 
-const condensedFavorites = computed(() => 
-    favorites.value.slice(0, 5).map(fav => ({
-        title: fav.page_title.length > 20 ? `${fav.page_title.substring(0, 20)}...` : fav.page_title,
-        href: fav.page_url,
-        icon: Star,
-        id: fav.id
-    }))
-);
 
 const condensedRecent = computed(() => 
     recentlyViewed.value.slice(0, 5).map(page => ({
@@ -163,7 +155,7 @@ const addTeamForm = useForm({
 });
 
 // Drag and drop functionality for user teams
-const onUserTeamsReorder = (event: any) => {
+const onUserTeamsReorder = () => {
     const reorderedTeams = userTeams.value.map((team, index) => ({
         id: team.id,
         sort_order: index
@@ -180,7 +172,7 @@ const onUserTeamsReorder = (event: any) => {
 };
 
 // Drag and drop functionality for favorites
-const onFavoritesReorder = (event: any) => {
+const onFavoritesReorder = () => {
     const reorderedFavorites = favorites.value.map((fav, index) => ({
         id: fav.id,
         sort_order: index
@@ -329,6 +321,59 @@ onUnmounted(() => {
                                 No recent pages
                             </div>
                         </SidebarMenuItem>
+                    </SidebarMenu>
+                </SidebarGroupContent>
+            </SidebarGroup>
+
+            <!-- Current Eurofurence Section -->
+            <SidebarGroup v-if="currentEF" class="px-2 py-2">
+                <SidebarGroupLabel class="text-xs font-medium text-sidebar-foreground/70">
+                    <Star class="mr-2 size-3" />
+                    Current Eurofurence
+                </SidebarGroupLabel>
+                <SidebarGroupContent>
+                    <SidebarMenu>
+                        <SidebarMenuItem class="py-0">
+                            <SidebarMenuButton as-child size="sm" class="h-7 text-xs">
+                                <Link :href="currentEF.href" prefetch class="flex items-center gap-2">
+                                    <span class="truncate">{{ currentEF.title }}</span>
+                                </Link>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    </SidebarMenu>
+                </SidebarGroupContent>
+            </SidebarGroup>
+
+            <!-- Archived Eurofurences Section -->
+            <SidebarGroup v-if="archivedEFs.length > 0" class="px-2 py-2">
+                <SidebarGroupLabel class="text-xs font-medium text-sidebar-foreground/70">
+                    <Clock class="mr-2 size-3" />
+                    Archived Eurofurences
+                </SidebarGroupLabel>
+                <SidebarGroupContent>
+                    <SidebarMenu>
+                        <!-- Show/Hide toggle for archived EFs -->
+                        <SidebarMenuItem class="py-0">
+                            <SidebarMenuButton 
+                                size="sm" 
+                                class="h-6 text-xs text-sidebar-foreground/60 hover:text-sidebar-foreground"
+                                @click="showArchivedEFs = !showArchivedEFs"
+                            >
+                                <span v-if="!showArchivedEFs">+ Show archived ({{ archivedEFs.length }})</span>
+                                <span v-else>- Hide archived</span>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                        
+                        <!-- Archived EF list (collapsible) -->
+                        <template v-if="showArchivedEFs">
+                            <SidebarMenuItem v-for="ef in archivedEFs" :key="ef.id" class="py-0">
+                                <SidebarMenuButton as-child size="sm" class="h-7 text-xs">
+                                    <Link :href="ef.href" prefetch class="flex items-center gap-2">
+                                        <span class="truncate">{{ ef.title }}</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        </template>
                     </SidebarMenu>
                 </SidebarGroupContent>
             </SidebarGroup>

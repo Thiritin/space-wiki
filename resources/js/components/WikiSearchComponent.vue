@@ -47,7 +47,9 @@ const hasResults = computed(() => searchResults.value.length > 0)
 const openSearch = () => {
     isOpen.value = true
     nextTick(() => {
-        searchInput.value?.focus()
+        setTimeout(() => {
+            searchInput.value?.focus()
+        }, 50)
     })
 }
 
@@ -196,7 +198,7 @@ defineExpose({
                 </div>
 
                 <!-- Search Results -->
-                <div class="max-h-[300px] overflow-x-hidden overflow-y-auto">
+                <div class="max-h-[400px] overflow-x-hidden overflow-y-auto">
                     <!-- Loading State -->
                     <div v-if="isLoading" class="p-4 text-center text-sm text-muted-foreground">
                         <div class="flex items-center justify-center space-x-2">
@@ -217,7 +219,7 @@ defineExpose({
                         <div
                             v-for="(result, index) in searchResults"
                             :key="result.id"
-                            class="flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground"
+                            class="flex cursor-pointer select-none items-start rounded-sm px-2 py-2 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground"
                             :class="{
                                 'bg-accent text-accent-foreground': index === selectedIndex
                             }"
@@ -232,9 +234,15 @@ defineExpose({
                                     class="truncate font-medium"
                                     v-html="result._highlightResult.title.value"
                                 ></div>
-                                <div class="flex items-center space-x-2 text-xs text-muted-foreground">
+                                <div 
+                                    class="text-xs text-muted-foreground line-clamp-2 mt-0.5 leading-relaxed"
+                                    v-html="result._highlightResult.content.value"
+                                ></div>
+                                <div class="flex items-center space-x-2 text-xs text-muted-foreground mt-1">
                                     <Folder class="h-3 w-3" />
                                     <span>{{ result.namespace }}</span>
+                                    <span class="text-xs opacity-50">•</span>
+                                    <span class="text-xs">{{ result.last_modified_human }}</span>
                                 </div>
                             </div>
                         </div>
@@ -271,10 +279,17 @@ defineExpose({
 
 <style scoped>
 :deep(mark) {
-    background-color: hsl(var(--primary) / 0.2);
-    color: hsl(var(--primary));
+    background-color: rgba(239, 68, 68, 0.15);
+    color: rgb(220, 38, 38);
     padding: 0.125rem 0.25rem;
     border-radius: 0.25rem;
-    font-weight: 500;
+    font-weight: 600;
+}
+
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 </style>

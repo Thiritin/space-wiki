@@ -136,7 +136,6 @@ class WikiContentService
             }
 
             // Extract additional data
-            $subpages = $this->dokuWikiService->getSubpages($pageId);
             $tableOfContents = $this->dokuWikiService->extractTableOfContents($htmlContent);
             $excerpt = $this->dokuWikiService->generateExcerpt($content);
 
@@ -145,7 +144,6 @@ class WikiContentService
                 $pageInfo, 
                 $content, 
                 $htmlContent,
-                $subpages,
                 $tableOfContents,
                 $excerpt
             );
@@ -176,7 +174,7 @@ class WikiContentService
     public function getStats(): array
     {
         try {
-            $documentCount = WikiPage::count();
+            $documentCount = Page::count();
             
             return [
                 'collection_exists' => true,

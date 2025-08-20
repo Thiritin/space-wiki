@@ -44,6 +44,7 @@ const props = defineProps<{
     content: string;
     error?: string;
     extractedTitle?: string;
+    subpages?: Array<{id: string, title: string, href?: string, url?: string, type: string, level?: number, isFolder?: boolean}>;
 }>();
 
 // Favorite functionality
@@ -52,7 +53,7 @@ const isFavorited = ref(false);
 // Content sidebar functionality
 const showContentSidebar = ref(false);
 const tableOfContents = ref<Array<{id: string, text: string, level: number}>>([]);
-const subpages = ref<Array<{id: string, title: string, href: string, type: string}>>([]);
+const subpages = ref<Array<{id: string, title: string, href: string, type: string, level: number, isFolder: boolean}>>([]);
 const recentPages = ref<Array<{id: string, title: string, href: string, visitedAt: Date}>>([]);
 
 // Search functionality for team:index (dashboard)
@@ -114,6 +115,11 @@ watch(() => props.page, () => {
     loadSubpages();
     addToRecentPages();
 });
+
+// Watch for subpages prop changes
+watch(() => props.subpages, () => {
+    loadSubpages();
+}, { immediate: true });
 
 // Function to wrap tables with overflow div (mobile/tablet only)
 function wrapTablesWithScrollDiv() {
@@ -305,30 +311,32 @@ async function extractTableOfContents() {
     });
 }
 
-// Load subpages for current namespace
-async function loadSubpages() {
-    subpages.value = [];
+// Load subpages from props (no AJAX needed)
+function loadSubpages() {
+    if (!props.subpages) {
+        subpages.value = [];
+        return;
+    }
     
-    if (!props.page) return;
+    // Check if subpages are hidden due to limit (contains _meta object)
+    if (props.subpages._meta && props.subpages._meta.hidden_due_to_limit) {
+        // Store the meta information for the UI to handle
+        subpages.value = props.subpages;
+        return;
+    }
     
-    try {
-        const response = await fetch(`/api/wiki/subpages?page=${encodeURIComponent(props.page)}`, {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-            }
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            subpages.value = data.map((page: any) => ({
-                id: page.id,
-                title: page.title || formatPageTitle(page.id), // Use title from API if available
-                href: route('wiki.show', { page: page.id }),
-                type: page.type || 'page'
-            }));
-        }
-    } catch (error) {
-        console.error('Failed to load subpages:', error);
+    // Normal array processing
+    if (Array.isArray(props.subpages)) {
+        subpages.value = props.subpages.map((page: any) => ({
+            id: page.id,
+            title: page.title || formatPageTitle(page.id),
+            href: page.href || page.url || route('wiki.show', { page: page.id }),
+            type: page.type || 'page',
+            level: page.level || 1,
+            isFolder: page.isFolder || false
+        }));
+    } else {
+        subpages.value = [];
     }
 }
 
@@ -568,7 +576,7 @@ function addToRecentPages() {
                             </Card>
 
                             <!-- Subpages -->
-                            <Card v-if="subpages.length > 0">
+                            <Card v-if="subpages.length > 0 || (subpages._meta && subpages._meta.hidden_due_to_limit)">
                                 <CardHeader>
                                     <CardTitle class="text-sm flex items-center gap-2">
                                         <FileText class="h-4 w-4" />
@@ -576,12 +584,22 @@ function addToRecentPages() {
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <nav class="space-y-1">
+                                    <!-- Hidden due to limit message -->
+                                    <div v-if="subpages._meta && subpages._meta.hidden_due_to_limit" class="text-center py-4 text-gray-600">
+                                        <FileText class="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                                        <p class="text-sm font-medium">Too many subpages to display</p>
+                                        <p class="text-xs text-gray-500">
+                                            {{ subpages._meta.total_count }} subpages found. Use search to find specific pages.
+                                        </p>
+                                    </div>
+                                    <!-- Normal subpages list -->
+                                    <nav v-else class="space-y-1">
                                         <a
                                             v-for="page in subpages"
                                             :key="page.id"
                                             :href="page.href"
                                             class="block text-sm hover:text-blue-600 transition-colors flex items-center gap-2 py-1"
+                                            :class="{ 'ml-4': page.level === 2 }"
                                         >
                                             <Folder v-if="page.type === 'folder'" class="h-3 w-3 flex-shrink-0 text-amber-600" />
                                             <FileText v-else class="h-3 w-3 flex-shrink-0 text-gray-500" />
@@ -655,7 +673,7 @@ function addToRecentPages() {
                             </Card>
 
                             <!-- Subpages -->
-                            <Card v-if="subpages.length > 0">
+                            <Card v-if="subpages.length > 0 || (subpages._meta && subpages._meta.hidden_due_to_limit)">
                                 <CardHeader>
                                     <CardTitle class="text-sm flex items-center gap-2">
                                         <FileText class="h-4 w-4" />
@@ -663,12 +681,22 @@ function addToRecentPages() {
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <nav class="space-y-1">
+                                    <!-- Hidden due to limit message -->
+                                    <div v-if="subpages._meta && subpages._meta.hidden_due_to_limit" class="text-center py-4 text-gray-600">
+                                        <FileText class="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                                        <p class="text-sm font-medium">Too many subpages to display</p>
+                                        <p class="text-xs text-gray-500">
+                                            {{ subpages._meta.total_count }} subpages found. Use search to find specific pages.
+                                        </p>
+                                    </div>
+                                    <!-- Normal subpages list -->
+                                    <nav v-else class="space-y-1">
                                         <a
                                             v-for="page in subpages"
                                             :key="page.id"
                                             :href="page.href"
                                             class="block text-sm hover:text-blue-600 transition-colors flex items-center gap-2 py-1"
+                                            :class="{ 'ml-4': page.level === 2 }"
                                         >
                                             <Folder v-if="page.type === 'folder'" class="h-3 w-3 flex-shrink-0 text-amber-600" />
                                             <FileText v-else class="h-3 w-3 flex-shrink-0 text-gray-500" />

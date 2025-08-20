@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\DokuWikiService;
+use App\Services\EurofurenceService;
 use App\Models\Page;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -12,7 +13,8 @@ use Inertia\Inertia;
 class WikiController extends Controller
 {
     public function __construct(
-        private DokuWikiService $dokuwikiService
+        private DokuWikiService $dokuwikiService,
+        private EurofurenceService $eurofurenceService
     ) {}
 
     public function index()
@@ -42,7 +44,7 @@ class WikiController extends Controller
                         'id' => $page->page_id,
                         'author' => 'DokuWiki',
                         'summary' => $page->excerpt ? substr($page->excerpt, 0, 100) : '',
-                        'revision' => $page->last_modified,
+                        'revision' => $page->revision ?? $page->last_modified,
                         'sizechange' => 0, // We don't track size changes
                     ];
                 })
@@ -66,6 +68,8 @@ class WikiController extends Controller
                     $indexPageInfo = [
                         'lastModified' => $indexPage->last_modified,
                         'author' => 'DokuWiki',
+                        'revision' => $indexPage->revision,
+                        'size' => $indexPage->size_bytes,
                     ];
                     break;
                 }
@@ -91,10 +95,16 @@ class WikiController extends Controller
         }
     }
 
-    public function show(Request $request, string $page = null)
+    public function show(Request $request, ?string $page = null)
     {
         if (!$page) {
             $page = 'start'; // Default DokuWiki start page
+        }
+
+        // Check if this is the current EF page
+        $currentEF = $this->eurofurenceService->getCurrentEF();
+        if ($page === $currentEF) {
+            return $this->showCurrentEurofurence($page);
         }
 
         try {
@@ -106,11 +116,13 @@ class WikiController extends Controller
                 throw new \Exception('Page not found in database');
             }
             
-            // Load from database
+            // Load from database with enhanced metadata
             $pageInfo = [
                 'lastModified' => $pageModel->last_modified,
-                'author' => 'DokuWiki',
-                'size' => strlen($pageModel->content ?? ''),
+                'author' => 'DokuWiki', // Author is always empty from DokuWiki
+                'size' => $pageModel->size_bytes ?? strlen($pageModel->content ?? ''),
+                'revision' => $pageModel->revision,
+                'permission' => $pageModel->permission,
             ];
             $content = $pageModel->html_content;
             $content = $this->transformDokuWikiLinks($content);
@@ -121,7 +133,7 @@ class WikiController extends Controller
                 'pageInfo' => $pageInfo,
                 'content' => $extractedData['content'],
                 'extractedTitle' => $extractedData['title'],
-                'subpages' => $pageModel?->subpages ?? [],
+                'subpages' => $pageModel->subpages,
                 'tableOfContents' => $pageModel?->table_of_contents ?? [],
                 'breadcrumbs' => $this->generateBreadcrumbs($page, $extractedData['title']),
             ]);
@@ -134,7 +146,9 @@ class WikiController extends Controller
                 $pageInfo = [
                     'lastModified' => $indexPageModel->last_modified,
                     'author' => 'DokuWiki',
-                    'size' => strlen($indexPageModel->content ?? ''),
+                    'size' => $indexPageModel->size_bytes ?? strlen($indexPageModel->content ?? ''),
+                    'revision' => $indexPageModel->revision,
+                    'permission' => $indexPageModel->permission,
                 ];
                 $content = $indexPageModel->html_content;
                 $content = $this->transformDokuWikiLinks($content);
@@ -145,7 +159,7 @@ class WikiController extends Controller
                     'pageInfo' => $pageInfo,
                     'content' => $extractedData['content'],
                     'extractedTitle' => $extractedData['title'],
-                    'subpages' => $indexPageModel->subpages ?? [],
+                    'subpages' => $indexPageModel->subpages,
                     'tableOfContents' => $indexPageModel->table_of_contents ?? [],
                     'breadcrumbs' => $this->generateBreadcrumbs($indexPage, $extractedData['title']),
                 ]);
@@ -169,7 +183,21 @@ class WikiController extends Controller
         }
 
         try {
-            $results = $this->dokuwikiService->searchPages($query);
+            // Use database search instead of DokuWiki API
+            $results = Page::where('title', 'like', "%{$query}%")
+                ->orWhere('content', 'like', "%{$query}%")
+                ->take(20)
+                ->get()
+                ->map(function ($page) {
+                    return [
+                        'id' => $page->page_id,
+                        'title' => $page->title,
+                        'href' => route('wiki.show', ['page' => $page->page_id]),
+                        'excerpt' => $page->excerpt ?: substr(strip_tags($page->content), 0, 200),
+                        'score' => 1, // Could implement proper scoring later
+                    ];
+                })
+                ->toArray();
             
             return Inertia::render('Wiki/Search', [
                 'query' => $query,
@@ -208,14 +236,17 @@ class WikiController extends Controller
                 'timestamp' => $pageModel->last_modified,
                 'author' => 'DokuWiki',
                 'summary' => 'Current version',
-                'size' => strlen($pageModel->content ?? ''),
+                'size' => $pageModel->size_bytes ?? strlen($pageModel->content ?? ''),
+                'revision' => $pageModel->revision,
             ]
         ];
         
         $pageInfo = [
             'lastModified' => $pageModel->last_modified,
             'author' => 'DokuWiki',
-            'size' => strlen($pageModel->content ?? ''),
+            'size' => $pageModel->size_bytes ?? strlen($pageModel->content ?? ''),
+            'revision' => $pageModel->revision,
+            'permission' => $pageModel->permission,
         ];
         
         return Inertia::render('Wiki/History', [
@@ -317,9 +348,9 @@ class WikiController extends Controller
                 })
                 ->toArray();
             
-            // Generate sitemap content using subpages from database
+            // Generate sitemap content using dynamic subpages
             $parentPage = Page::findByPageId($namespace);
-            $subpages = $parentPage?->subpages ?? [];
+            $subpages = $parentPage ? $parentPage->subpages : [];
             
             $sitemapContent = $this->generateSitemapHtml($namespace, $namespacePages, $subpages);
             
@@ -505,89 +536,6 @@ class WikiController extends Controller
         return $content;
     }
 
-    public function getSubpages(Request $request)
-    {
-        $page = $request->get('page');
-        
-        if (!$page) {
-            return response()->json([]);
-        }
-        
-        try {
-            // If the current page ends with :index, use the namespace without :index
-            $namespace = str_ends_with($page, ':index') ? substr($page, 0, -6) : $page;
-            
-            // Use getNamespacePages with depth 2 to get direct children and one level deeper
-            $allPages = $this->dokuwikiService->getNamespacePages($namespace, 2);
-            $subpages = [];
-            $subfolders = [];
-            
-            // Find all pages that are children of this namespace
-            foreach ($allPages as $pageData) {
-                $pageId = $pageData['id'] ?? '';
-                
-                // Check if page starts with our namespace followed by a colon
-                if (strpos($pageId, $namespace . ':') === 0) {
-                    // Get the part after our namespace
-                    $remainder = substr($pageId, strlen($namespace) + 1);
-                    
-                    // Skip if it's the current page
-                    if ($pageId === $page || $remainder === 'index') {
-                        continue;
-                    }
-                    
-                    // Check if this is a direct child (no more colons) - regular page
-                    if (strpos($remainder, ':') === false) {
-                        $subpages[] = [
-                            'id' => $pageId,
-                            'title' => $this->formatPageTitle($pageId),
-                            'href' => route('wiki.show', ['page' => $pageId]),
-                            'size' => $pageData['size'] ?? 0,
-                            'lastModified' => $pageData['lastModified'] ?? null,
-                            'type' => 'page'
-                        ];
-                    } else {
-                        // This is a deeper nested page - check if it's a subfolder index
-                        $parts = explode(':', $remainder);
-                        if (count($parts) === 2 && $parts[1] === 'index') {
-                            // This is a subfolder with an index page
-                            $subfolderName = $parts[0];
-                            $subfolderNamespace = $namespace . ':' . $subfolderName;
-                            
-                            // Only add if we haven't seen this subfolder before
-                            if (!isset($subfolders[$subfolderName])) {
-                                $subfolders[$subfolderName] = [
-                                    'id' => $subfolderNamespace . ':index',
-                                    'title' => $this->formatPageTitle($subfolderNamespace),
-                                    'href' => route('wiki.show', ['page' => $subfolderNamespace . ':index']),
-                                    'size' => $pageData['size'] ?? 0,
-                                    'lastModified' => $pageData['lastModified'] ?? null,
-                                    'type' => 'folder'
-                                ];
-                            }
-                        }
-                    }
-                }
-            }
-            
-            // Combine subpages and subfolders
-            $allSubitems = array_merge($subpages, array_values($subfolders));
-            
-            // Sort by type (folders first) then by title
-            usort($allSubitems, function($a, $b) {
-                // Folders first
-                if ($a['type'] !== $b['type']) {
-                    return $a['type'] === 'folder' ? -1 : 1;
-                }
-                // Then alphabetically by title
-                return strcmp($a['title'], $b['title']);
-            });
-            
-            return response()->json($allSubitems);
-        } catch (\Exception $e) {
-            return response()->json([]);
-        }
-    }
 
     private function extractH1Title(string $content): array
     {
@@ -618,41 +566,149 @@ class WikiController extends Controller
     {
         $breadcrumbs = [];
         
-        // Always start with Wiki home
-        $breadcrumbs[] = [
-            'title' => 'Wiki',
-            'href' => route('wiki.index'),
-        ];
-
         if ($pageId === 'start' || $pageId === 'index') {
-            // For the main wiki page, just return Wiki home
+            // For the main wiki page, just return empty breadcrumbs
             return $breadcrumbs;
         }
-
+        
         // Split the page ID into parts
         $parts = explode(':', $pageId);
-        $currentPath = '';
-
-        foreach ($parts as $index => $part) {
-            $currentPath = $currentPath ? $currentPath . ':' . $part : $part;
-            $isLast = $index === count($parts) - 1;
+        
+        // Special handling for index pages - skip the 'index' part and use page titles
+        if (end($parts) === 'index') {
+            array_pop($parts); // Remove 'index' from parts
             
-            // For the last part, use the page title if available
-            if ($isLast && $pageTitle) {
-                $title = $pageTitle;
-            } else {
-                // Format the part name
-                $title = ucfirst(str_replace(['_', '-'], ' ', $part));
+            // For index pages, we want to show actual page titles from database
+            $currentPath = '';
+            foreach ($parts as $index => $part) {
+                $currentPath = $currentPath ? $currentPath . ':' . $part : $part;
+                $isLast = $index === count($parts) - 1;
+                
+                if ($isLast && $pageTitle) {
+                    // Use the provided page title for the last part
+                    $title = $pageTitle;
+                } else {
+                    // Try to get the title from the database for this namespace
+                    $indexPageId = $currentPath . ':index';
+                    $pageModel = Page::findByPageId($indexPageId);
+                    
+                    if ($pageModel && $pageModel->title) {
+                        $title = $pageModel->title;
+                    } else {
+                        // Fallback to formatted part name
+                        $title = ucfirst(str_replace(['_', '-'], ' ', $part));
+                    }
+                }
+                
+                // Only add href for non-last items
+                $breadcrumbs[] = [
+                    'title' => $title,
+                    'href' => $isLast ? '' : route('wiki.show', ['page' => $currentPath]),
+                ];
+            }
+        } else {
+            // Normal page handling (non-index pages)
+            $currentPath = '';
+            foreach ($parts as $index => $part) {
+                $currentPath = $currentPath ? $currentPath . ':' . $part : $part;
+                $isLast = $index === count($parts) - 1;
+                
+                // For the last part, use the page title if available
+                if ($isLast && $pageTitle) {
+                    $title = $pageTitle;
+                } else {
+                    // Try to get title from database
+                    $pageModel = Page::findByPageId($currentPath);
+                    if ($pageModel && $pageModel->title) {
+                        $title = $pageModel->title;
+                    } else {
+                        // Fallback to formatted part name
+                        $title = ucfirst(str_replace(['_', '-'], ' ', $part));
+                    }
+                }
+                
+                // Only add href for non-last items (breadcrumbs don't link to current page)
+                $breadcrumbs[] = [
+                    'title' => $title,
+                    'href' => $isLast ? '' : route('wiki.show', ['page' => $currentPath]),
+                ];
+            }
+        }
+        
+        return $breadcrumbs;
+    }
+
+    private function showCurrentEurofurence(string $currentEF): \Inertia\Response
+    {
+        try {
+            // Try to load the ef##:index page first, then fall back to ef##
+            $indexPage = Page::findByPageId($currentEF . ':index');
+            $mainPage = Page::findByPageId($currentEF);
+            
+            $pageModel = $indexPage ?: $mainPage;
+            
+            if (!$pageModel || !$pageModel->html_content) {
+                throw new \Exception('Current EF page not found');
             }
 
-            // Only add href for non-last items (breadcrumbs don't link to current page)
-            $breadcrumbs[] = [
-                'title' => $title,
-                'href' => $isLast ? '' : route('wiki.show', ['page' => $currentPath]),
+            // Load page content and metadata
+            $pageInfo = [
+                'lastModified' => $pageModel->last_modified,
+                'author' => 'DokuWiki',
+                'size' => $pageModel->size_bytes ?? strlen($pageModel->content ?? ''),
+                'revision' => $pageModel->revision,
+                'permission' => $pageModel->permission,
             ];
+            
+            $content = $pageModel->html_content;
+            $content = $this->transformDokuWikiLinks($content);
+            $extractedData = $this->extractH1Title($content);
+
+            // Get historical EFs for the bottom section
+            $historicalEFs = $this->eurofurenceService->getOldEFs();
+
+            // Add historical EFs section to the content
+            $historicalSection = $this->generateHistoricalEFsHtml($historicalEFs);
+            $content = $extractedData['content'] . $historicalSection;
+
+            return Inertia::render('Wiki/Page', [
+                'page' => $currentEF,
+                'pageInfo' => $pageInfo,
+                'content' => $content,
+                'extractedTitle' => $extractedData['title'],
+                'subpages' => $pageModel->subpages,
+                'tableOfContents' => $pageModel->table_of_contents ?? [],
+                'breadcrumbs' => $this->generateBreadcrumbs($currentEF, $extractedData['title']),
+                'isCurrentEF' => true,
+                'historicalEFs' => $historicalEFs,
+            ]);
+        } catch (\Exception $e) {
+            // Fallback to regular page handling
+            return $this->generateNamespaceSitemap($currentEF);
+        }
+    }
+
+    private function generateHistoricalEFsHtml(array $historicalEFs): string
+    {
+        if (empty($historicalEFs)) {
+            return '';
         }
 
-        return $breadcrumbs;
+        $html = '<div class="mt-8 pt-6 border-t border-gray-200">';
+        $html .= '<h2 class="text-xl font-semibold mb-4">Looking for old Eurofurence?</h2>';
+        $html .= '<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">';
+
+        foreach ($historicalEFs as $ef) {
+            $html .= '<a href="' . $ef['url'] . '" class="block p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors">';
+            $html .= '<div class="font-medium text-sm">' . htmlspecialchars($ef['title']) . '</div>';
+            $html .= '<div class="text-xs text-gray-500">EF' . $ef['year'] . '</div>';
+            $html .= '</a>';
+        }
+
+        $html .= '</div>';
+        $html .= '</div>';
+
+        return $html;
     }
 
 }
