@@ -638,12 +638,12 @@ function addToRecentPages() {
                     @click="showContentSidebar = false"
                 >
                     <div
-                        class="fixed right-0 top-0 h-full w-80 bg-white shadow-lg transform transition-transform duration-300 ease-in-out overflow-y-auto"
+                        class="fixed right-0 top-0 h-full w-80 bg-white dark:bg-gray-900 shadow-lg transform transition-transform duration-300 ease-in-out overflow-y-auto"
                         @click.stop
                     >
-                        <div class="p-4 border-b">
+                        <div class="p-4 border-b border-gray-200 dark:border-gray-700">
                             <div class="flex items-center justify-between">
-                                <h2 class="font-semibold">Page Navigation</h2>
+                                <h2 class="font-semibold text-gray-900 dark:text-gray-100">Page Navigation</h2>
                                 <Button @click="showContentSidebar = false" variant="ghost" size="sm">
                                     <X class="h-4 w-4" />
                                 </Button>
@@ -665,7 +665,7 @@ function addToRecentPages() {
                                             v-for="item in tableOfContents"
                                             :key="item.id"
                                             @click="scrollToHeading(item.id)"
-                                            class="block w-full text-left text-sm hover:text-blue-600 transition-colors"
+                                            class="block w-full text-left text-sm hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                                             :class="{
                                                 'ml-0': item.level === 1,
                                                 'ml-4': item.level === 2,
@@ -691,10 +691,10 @@ function addToRecentPages() {
                                 </CardHeader>
                                 <CardContent>
                                     <!-- Hidden due to limit message -->
-                                    <div v-if="subpages._meta && subpages._meta.hidden_due_to_limit" class="text-center py-4 text-gray-600">
-                                        <FileText class="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                                    <div v-if="subpages._meta && subpages._meta.hidden_due_to_limit" class="text-center py-4 text-gray-600 dark:text-gray-400">
+                                        <FileText class="h-8 w-8 mx-auto mb-2 text-gray-400 dark:text-gray-500" />
                                         <p class="text-sm font-medium">Too many subpages to display</p>
-                                        <p class="text-xs text-gray-500">
+                                        <p class="text-xs text-gray-500 dark:text-gray-400">
                                             {{ subpages._meta.total_count }} subpages found. Use search to find specific pages.
                                         </p>
                                     </div>
@@ -704,11 +704,11 @@ function addToRecentPages() {
                                             v-for="page in subpages"
                                             :key="page.id"
                                             :href="page.href"
-                                            class="block text-sm hover:text-blue-600 transition-colors flex items-center gap-2 py-1"
+                                            class="flex text-sm hover:text-blue-600 dark:hover:text-blue-400 transition-colors items-center gap-2 py-1"
                                             :class="{ 'ml-4': page.level === 2 }"
                                         >
-                                            <Folder v-if="page.type === 'folder'" class="h-3 w-3 flex-shrink-0 text-amber-600" />
-                                            <FileText v-else class="h-3 w-3 flex-shrink-0 text-gray-500" />
+                                            <Folder v-if="page.type === 'folder'" class="h-3 w-3 flex-shrink-0 text-amber-600 dark:text-amber-500" />
+                                            <FileText v-else class="h-3 w-3 flex-shrink-0 text-gray-500 dark:text-gray-400" />
                                             <span class="truncate">{{ page.title }}</span>
                                         </a>
                                     </nav>

@@ -93,14 +93,14 @@ function compareRevisions(from: number, to: number) {
             <div class="mb-6">
                 <div class="flex items-center justify-between mb-4">
                     <div class="flex-1">
-                        <h1 class="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+                        <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-3">
                             <History class="h-8 w-8" />
                             Page History
                         </h1>
-                        <p class="text-lg text-gray-600">
+                        <p class="text-lg text-gray-600 dark:text-gray-300">
                             {{ getPageTitle(props.page, props.pageInfo) }}
                         </p>
-                        <p class="text-sm text-gray-500 mt-1">
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                             {{ props.page }}
                         </p>
                     </div>
@@ -134,9 +134,9 @@ function compareRevisions(from: number, to: number) {
             </div>
 
             <!-- Error Alert -->
-            <div v-if="props.error" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-md flex items-center gap-2">
-                <FileText class="h-5 w-5 text-red-500" />
-                <span class="text-red-700">{{ props.error }}</span>
+            <div v-if="props.error" class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md flex items-center gap-2">
+                <FileText class="h-5 w-5 text-red-500 dark:text-red-400" />
+                <span class="text-red-700 dark:text-red-300">{{ props.error }}</span>
             </div>
 
             <!-- History Content -->
@@ -155,47 +155,47 @@ function compareRevisions(from: number, to: number) {
                         <div 
                             v-for="(entry, index) in props.versions" 
                             :key="entry.version"
-                            class="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                            class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                         >
                             <div class="flex items-start justify-between">
                                 <div class="flex-1">
                                     <div class="flex items-center gap-3 mb-2">
-                                        <span class="text-lg font-semibold text-gray-900">
+                                        <span class="text-lg font-semibold text-gray-900 dark:text-gray-100">
                                             Version {{ entry.version }}
                                         </span>
-                                        <span v-if="index === 0" class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                                        <span v-if="index === 0" class="bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 text-xs px-2 py-1 rounded-full">
                                             Current
                                         </span>
                                     </div>
 
                                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                                         <div class="flex items-center gap-2">
-                                            <User class="h-4 w-4 text-gray-500" />
+                                            <User class="h-4 w-4 text-gray-500 dark:text-gray-400" />
                                             <div>
-                                                <div class="text-gray-600">Author</div>
+                                                <div class="text-gray-600 dark:text-gray-400">Author</div>
                                                 <div class="font-medium">{{ entry.author || 'Unknown' }}</div>
-                                                <div v-if="entry.ip" class="text-xs text-gray-500">{{ entry.ip }}</div>
+                                                <div v-if="entry.ip" class="text-xs text-gray-500 dark:text-gray-400">{{ entry.ip }}</div>
                                             </div>
                                         </div>
 
                                         <div class="flex items-center gap-2">
-                                            <Clock class="h-4 w-4 text-gray-500" />
+                                            <Clock class="h-4 w-4 text-gray-500 dark:text-gray-400" />
                                             <div>
-                                                <div class="text-gray-600">Modified</div>
+                                                <div class="text-gray-600 dark:text-gray-400">Modified</div>
                                                 <div class="font-medium">{{ formatDate(entry.timestamp) }}</div>
                                             </div>
                                         </div>
 
                                         <div class="flex items-center gap-2">
-                                            <FileText class="h-4 w-4 text-gray-500" />
+                                            <FileText class="h-4 w-4 text-gray-500 dark:text-gray-400" />
                                             <div>
-                                                <div class="text-gray-600">Size</div>
+                                                <div class="text-gray-600 dark:text-gray-400">Size</div>
                                                 <div class="font-medium flex items-center gap-2">
                                                     {{ entry.size ? formatFileSize(entry.size) : 'Unknown' }}
                                                     <span 
                                                         v-if="entry.sizechange" 
                                                         class="text-xs px-1 py-0.5 rounded"
-                                                        :class="entry.sizechange > 0 ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50'"
+                                                        :class="entry.sizechange > 0 ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30' : 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30'"
                                                     >
                                                         {{ entry.sizechange > 0 ? '+' : '' }}{{ entry.sizechange }}
                                                     </span>
@@ -204,7 +204,7 @@ function compareRevisions(from: number, to: number) {
                                         </div>
                                     </div>
 
-                                    <div v-if="entry.summary" class="mt-3 p-2 bg-gray-50 rounded text-sm">
+                                    <div v-if="entry.summary" class="mt-3 p-2 bg-gray-50 dark:bg-gray-800 rounded text-sm">
                                         <strong>Summary:</strong> {{ entry.summary }}
                                     </div>
                                 </div>
@@ -240,9 +240,9 @@ function compareRevisions(from: number, to: number) {
             <!-- No History State -->
             <Card v-else-if="!props.error">
                 <CardContent class="text-center py-12">
-                    <History class="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                    <h3 class="text-lg font-medium text-gray-900 mb-2">No History Available</h3>
-                    <p class="text-gray-600 mb-4">
+                    <History class="h-16 w-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No History Available</h3>
+                    <p class="text-gray-600 dark:text-gray-400 mb-4">
                         No revision history could be found for this page.
                     </p>
                     <Button @click="goBack" variant="outline">
