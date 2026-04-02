@@ -65,7 +65,7 @@ const performSearch = async (query: string) => {
     }
 
     isLoading.value = true;
-    
+
     try {
         const response = await fetch(`/api/wiki/search?q=${encodeURIComponent(query)}&limit=8`);
         const data: SearchResponse = await response.json();
@@ -161,10 +161,10 @@ defineExpose({
 <template>
     <div ref="searchContainer" class="relative">
         <!-- Search Trigger Button -->
-        <Button 
-            variant="ghost" 
-            size="icon" 
-            class="group h-9 w-9 cursor-pointer bg-blue-100 hover:bg-blue-200 border-2 border-blue-300"
+        <Button
+            variant="ghost"
+            size="icon"
+            class="group h-9 w-9 cursor-pointer border-2 border-blue-300 bg-blue-100 hover:bg-blue-200"
             @click="openSearch"
             title="Search (Cmd+K)"
         >
@@ -172,24 +172,23 @@ defineExpose({
         </Button>
 
         <!-- Search Modal/Popup -->
-        <div 
-            v-if="isOpen"
-            class="fixed inset-0 z-50 flex items-start justify-center bg-black/50 backdrop-blur-sm"
-        >
-            <div class="mt-20 w-full max-w-2xl mx-4">
-                <div class="bg-white dark:bg-neutral-900 rounded-lg shadow-2xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
+        <div v-if="isOpen" class="fixed inset-0 z-50 flex items-start justify-center bg-black/50 backdrop-blur-sm">
+            <div class="mx-4 mt-20 w-full max-w-2xl">
+                <div class="overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-2xl dark:border-neutral-700 dark:bg-neutral-900">
                     <!-- Search Input -->
-                    <div class="flex items-center px-4 py-3 border-b border-neutral-200 dark:border-neutral-700">
-                        <Search class="size-5 text-neutral-400 mr-3 flex-shrink-0" />
+                    <div class="flex items-center border-b border-neutral-200 px-4 py-3 dark:border-neutral-700">
+                        <Search class="mr-3 size-5 flex-shrink-0 text-neutral-400" />
                         <Input
                             ref="searchInput"
                             v-model="searchQuery"
                             placeholder="Search wiki pages..."
-                            class="border-0 bg-transparent text-lg placeholder:text-neutral-400 focus:ring-0 flex-1"
+                            class="flex-1 border-0 bg-transparent text-lg placeholder:text-neutral-400 focus:ring-0"
                             autofocus
                         />
-                        <div class="flex items-center space-x-2 ml-3">
-                            <kbd class="hidden sm:inline-block px-2 py-1 text-xs font-semibold text-neutral-500 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded">
+                        <div class="ml-3 flex items-center space-x-2">
+                            <kbd
+                                class="hidden rounded border border-neutral-200 bg-neutral-100 px-2 py-1 text-xs font-semibold text-neutral-500 sm:inline-block dark:border-neutral-700 dark:bg-neutral-800"
+                            >
                                 ESC
                             </kbd>
                             <Button variant="ghost" size="icon" class="h-8 w-8" @click="closeSearch">
@@ -203,15 +202,15 @@ defineExpose({
                         <!-- Loading State -->
                         <div v-if="isLoading" class="p-4 text-center text-neutral-500">
                             <div class="flex items-center justify-center space-x-2">
-                                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                <div class="h-4 w-4 animate-spin rounded-full border-b-2 border-blue-600"></div>
                                 <span>Searching...</span>
                             </div>
                         </div>
 
                         <!-- No Results -->
                         <div v-else-if="searchQuery && !hasResults && !isLoading" class="p-8 text-center text-neutral-500">
-                            <FileText class="size-12 mx-auto mb-3 opacity-50" />
-                            <p class="text-lg font-medium mb-1">No results found</p>
+                            <FileText class="mx-auto mb-3 size-12 opacity-50" />
+                            <p class="mb-1 text-lg font-medium">No results found</p>
                             <p class="text-sm">Try searching with different keywords</p>
                         </div>
 
@@ -220,30 +219,30 @@ defineExpose({
                             <div
                                 v-for="(result, index) in searchResults"
                                 :key="result.id"
-                                class="group cursor-pointer px-4 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+                                class="group cursor-pointer px-4 py-3 transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800"
                                 :class="{
-                                    'bg-neutral-50 dark:bg-neutral-800': index === selectedIndex
+                                    'bg-neutral-50 dark:bg-neutral-800': index === selectedIndex,
                                 }"
                                 @click="selectResult(result)"
                                 @mouseenter="selectedIndex = index"
                             >
                                 <div class="flex items-start space-x-3">
-                                    <div class="flex-shrink-0 mt-1">
+                                    <div class="mt-1 flex-shrink-0">
                                         <FileText class="size-4 text-neutral-400 group-hover:text-blue-600" />
                                     </div>
-                                    <div class="flex-1 min-w-0">
-                                        <div class="flex items-center space-x-2 mb-1">
-                                            <h3 
-                                                class="font-medium text-neutral-900 dark:text-neutral-100 truncate"
+                                    <div class="min-w-0 flex-1">
+                                        <div class="mb-1 flex items-center space-x-2">
+                                            <h3
+                                                class="truncate font-medium text-neutral-900 dark:text-neutral-100"
                                                 v-html="result._highlightResult.title.value"
                                             ></h3>
-                                            <div class="flex items-center space-x-1 text-xs text-neutral-500 flex-shrink-0">
+                                            <div class="flex flex-shrink-0 items-center space-x-1 text-xs text-neutral-500">
                                                 <Folder class="size-3" />
                                                 <span>{{ result.namespace }}</span>
                                             </div>
                                         </div>
-                                        <p 
-                                            class="text-sm text-neutral-600 dark:text-neutral-400 line-clamp-2"
+                                        <p
+                                            class="line-clamp-2 text-sm text-neutral-600 dark:text-neutral-400"
                                             v-html="result._highlightResult.content.value"
                                         ></p>
                                     </div>
@@ -253,11 +252,13 @@ defineExpose({
 
                         <!-- Empty State -->
                         <div v-else-if="!searchQuery" class="p-8 text-center text-neutral-500">
-                            <Search class="size-12 mx-auto mb-3 opacity-50" />
-                            <p class="text-lg font-medium mb-1">Search Wiki Pages</p>
-                            <p class="text-sm mb-4">Find documentation, guides, and more</p>
+                            <Search class="mx-auto mb-3 size-12 opacity-50" />
+                            <p class="mb-1 text-lg font-medium">Search Wiki Pages</p>
+                            <p class="mb-4 text-sm">Find documentation, guides, and more</p>
                             <div class="flex items-center justify-center space-x-1 text-xs">
-                                <kbd class="px-2 py-1 font-semibold bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded">
+                                <kbd
+                                    class="rounded border border-neutral-200 bg-neutral-100 px-2 py-1 font-semibold dark:border-neutral-700 dark:bg-neutral-800"
+                                >
                                     ⌘K
                                 </kbd>
                                 <span>to search</span>
@@ -266,19 +267,28 @@ defineExpose({
                     </div>
 
                     <!-- Footer -->
-                    <div v-if="hasResults" class="px-4 py-3 border-t border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50">
+                    <div v-if="hasResults" class="border-t border-neutral-200 bg-neutral-50 px-4 py-3 dark:border-neutral-700 dark:bg-neutral-800/50">
                         <div class="flex items-center justify-between text-xs text-neutral-500">
                             <div class="flex items-center space-x-4">
                                 <div class="flex items-center space-x-1">
-                                    <kbd class="px-1.5 py-0.5 font-semibold bg-white dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded text-xs">↑↓</kbd>
+                                    <kbd
+                                        class="rounded border border-neutral-200 bg-white px-1.5 py-0.5 text-xs font-semibold dark:border-neutral-600 dark:bg-neutral-700"
+                                        >↑↓</kbd
+                                    >
                                     <span>navigate</span>
                                 </div>
                                 <div class="flex items-center space-x-1">
-                                    <kbd class="px-1.5 py-0.5 font-semibold bg-white dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded text-xs">↵</kbd>
+                                    <kbd
+                                        class="rounded border border-neutral-200 bg-white px-1.5 py-0.5 text-xs font-semibold dark:border-neutral-600 dark:bg-neutral-700"
+                                        >↵</kbd
+                                    >
                                     <span>select</span>
                                 </div>
                                 <div class="flex items-center space-x-1">
-                                    <kbd class="px-1.5 py-0.5 font-semibold bg-white dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded text-xs">esc</kbd>
+                                    <kbd
+                                        class="rounded border border-neutral-200 bg-white px-1.5 py-0.5 text-xs font-semibold dark:border-neutral-600 dark:bg-neutral-700"
+                                        >esc</kbd
+                                    >
                                     <span>close</span>
                                 </div>
                             </div>

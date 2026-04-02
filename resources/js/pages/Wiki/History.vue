@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Head, router } from '@inertiajs/vue3';
-import { History, ArrowLeft, Clock, User, FileText, RotateCcw, ExternalLink } from 'lucide-vue-next';
-import { ref } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { Head, router } from '@inertiajs/vue3';
+import { ArrowLeft, Clock, ExternalLink, FileText, History, RotateCcw, User } from 'lucide-vue-next';
 
 defineOptions({
-    layout: AppLayout
+    layout: AppLayout,
 });
 
 interface HistoryEntry {
@@ -39,33 +38,33 @@ function formatDate(timestamp: number) {
         month: 'long',
         day: 'numeric',
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
     });
 }
 
 function formatFileSize(bytes: number): string {
     if (!bytes) return '0 B';
-    
+
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    
-    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+
+    return Math.round((bytes / Math.pow(1024, i)) * 100) / 100 + ' ' + sizes[i];
 }
 
 function getPageTitle(page: string, pageInfo?: { name: string }): string {
     if (pageInfo?.name) {
         return pageInfo.name;
     }
-    
+
     const parts = page.split(':');
     const lastPart = parts[parts.length - 1];
-    
+
     if (lastPart === 'index' && parts.length > 1) {
         const previousPart = parts[parts.length - 2];
-        return previousPart.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        return previousPart.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
     }
-    
-    return lastPart.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+    return lastPart.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
 }
 
 function goBack() {
@@ -91,38 +90,33 @@ function compareRevisions(from: number, to: number) {
         <div class="px-4 py-6 sm:px-0">
             <!-- Header -->
             <div class="mb-6">
-                <div class="flex items-center justify-between mb-4">
+                <div class="mb-4 flex items-center justify-between">
                     <div class="flex-1">
-                        <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-3">
+                        <h1 class="mb-2 flex items-center gap-3 text-3xl font-bold text-gray-900 dark:text-gray-100">
                             <History class="h-8 w-8" />
                             Page History
                         </h1>
                         <p class="text-lg text-gray-600 dark:text-gray-300">
                             {{ getPageTitle(props.page, props.pageInfo) }}
                         </p>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                             {{ props.page }}
                         </p>
                     </div>
 
                     <div class="flex items-center gap-2">
                         <!-- Back to Page button -->
-                        <Button 
-                            @click="goBack"
-                            variant="outline" 
-                            size="sm"
-                            class="flex items-center gap-2"
-                        >
+                        <Button @click="goBack" variant="outline" size="sm" class="flex items-center gap-2">
                             <ArrowLeft class="h-4 w-4" />
                             Back to Page
                         </Button>
 
                         <!-- Open in DokuWiki button -->
-                        <Button 
-                            as="a" 
+                        <Button
+                            as="a"
                             :href="`https://wiki.eurofurence.org/doku.php?id=${props.page}&do=revisions`"
                             target="_blank"
-                            variant="outline" 
+                            variant="outline"
                             size="sm"
                             class="flex items-center gap-2"
                         >
@@ -134,7 +128,10 @@ function compareRevisions(from: number, to: number) {
             </div>
 
             <!-- Error Alert -->
-            <div v-if="props.error" class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md flex items-center gap-2">
+            <div
+                v-if="props.error"
+                class="mb-6 flex items-center gap-2 rounded-md border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20"
+            >
                 <FileText class="h-5 w-5 text-red-500 dark:text-red-400" />
                 <span class="text-red-700 dark:text-red-300">{{ props.error }}</span>
             </div>
@@ -146,29 +143,28 @@ function compareRevisions(from: number, to: number) {
                         <Clock class="h-5 w-5" />
                         Revision History
                     </CardTitle>
-                    <CardDescription>
-                        {{ props.versions.length }} revision{{ props.versions.length !== 1 ? 's' : '' }} found
-                    </CardDescription>
+                    <CardDescription> {{ props.versions.length }} revision{{ props.versions.length !== 1 ? 's' : '' }} found </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div class="space-y-4">
-                        <div 
-                            v-for="(entry, index) in props.versions" 
+                        <div
+                            v-for="(entry, index) in props.versions"
                             :key="entry.version"
-                            class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                            class="rounded-lg border border-gray-200 p-4 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800/50"
                         >
                             <div class="flex items-start justify-between">
                                 <div class="flex-1">
-                                    <div class="flex items-center gap-3 mb-2">
-                                        <span class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                                            Version {{ entry.version }}
-                                        </span>
-                                        <span v-if="index === 0" class="bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 text-xs px-2 py-1 rounded-full">
+                                    <div class="mb-2 flex items-center gap-3">
+                                        <span class="text-lg font-semibold text-gray-900 dark:text-gray-100"> Version {{ entry.version }} </span>
+                                        <span
+                                            v-if="index === 0"
+                                            class="rounded-full bg-green-100 px-2 py-1 text-xs text-green-800 dark:bg-green-900/50 dark:text-green-300"
+                                        >
                                             Current
                                         </span>
                                     </div>
 
-                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                    <div class="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
                                         <div class="flex items-center gap-2">
                                             <User class="h-4 w-4 text-gray-500 dark:text-gray-400" />
                                             <div>
@@ -190,12 +186,16 @@ function compareRevisions(from: number, to: number) {
                                             <FileText class="h-4 w-4 text-gray-500 dark:text-gray-400" />
                                             <div>
                                                 <div class="text-gray-600 dark:text-gray-400">Size</div>
-                                                <div class="font-medium flex items-center gap-2">
+                                                <div class="flex items-center gap-2 font-medium">
                                                     {{ entry.size ? formatFileSize(entry.size) : 'Unknown' }}
-                                                    <span 
-                                                        v-if="entry.sizechange" 
-                                                        class="text-xs px-1 py-0.5 rounded"
-                                                        :class="entry.sizechange > 0 ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30' : 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30'"
+                                                    <span
+                                                        v-if="entry.sizechange"
+                                                        class="rounded px-1 py-0.5 text-xs"
+                                                        :class="
+                                                            entry.sizechange > 0
+                                                                ? 'bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400'
+                                                                : 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                                                        "
                                                     >
                                                         {{ entry.sizechange > 0 ? '+' : '' }}{{ entry.sizechange }}
                                                     </span>
@@ -204,22 +204,17 @@ function compareRevisions(from: number, to: number) {
                                         </div>
                                     </div>
 
-                                    <div v-if="entry.summary" class="mt-3 p-2 bg-gray-50 dark:bg-gray-800 rounded text-sm">
+                                    <div v-if="entry.summary" class="mt-3 rounded bg-gray-50 p-2 text-sm dark:bg-gray-800">
                                         <strong>Summary:</strong> {{ entry.summary }}
                                     </div>
                                 </div>
 
-                                <div class="flex flex-col gap-2 ml-4">
-                                    <Button
-                                        @click="viewRevision(entry.version)"
-                                        variant="outline"
-                                        size="sm"
-                                        class="flex items-center gap-2 text-xs"
-                                    >
+                                <div class="ml-4 flex flex-col gap-2">
+                                    <Button @click="viewRevision(entry.version)" variant="outline" size="sm" class="flex items-center gap-2 text-xs">
                                         <FileText class="h-3 w-3" />
                                         View
                                     </Button>
-                                    
+
                                     <Button
                                         v-if="index < props.versions.length - 1"
                                         @click="compareRevisions(props.versions[index + 1].version, entry.version)"
@@ -239,15 +234,11 @@ function compareRevisions(from: number, to: number) {
 
             <!-- No History State -->
             <Card v-else-if="!props.error">
-                <CardContent class="text-center py-12">
-                    <History class="h-16 w-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No History Available</h3>
-                    <p class="text-gray-600 dark:text-gray-400 mb-4">
-                        No revision history could be found for this page.
-                    </p>
-                    <Button @click="goBack" variant="outline">
-                        Back to Page
-                    </Button>
+                <CardContent class="py-12 text-center">
+                    <History class="mx-auto mb-4 h-16 w-16 text-gray-400 dark:text-gray-500" />
+                    <h3 class="mb-2 text-lg font-medium text-gray-900 dark:text-gray-100">No History Available</h3>
+                    <p class="mb-4 text-gray-600 dark:text-gray-400">No revision history could be found for this page.</p>
+                    <Button @click="goBack" variant="outline"> Back to Page </Button>
                 </CardContent>
             </Card>
         </div>

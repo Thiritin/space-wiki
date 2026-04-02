@@ -16,7 +16,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: '8.4'
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, imagick, mysql, pdo_mysql
           coverage: none
 
@@ -87,4 +87,4 @@ jobs:
         uses: aglipanci/laravel-pint-action@2.3.1
         with:
           testMode: true
-          pintVersion: 1.18.1
+          pintVersion: 1.29.0

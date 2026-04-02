@@ -1,191 +1,184 @@
 <script setup lang="ts">
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { router } from '@inertiajs/vue3'
-import { Search, X, FileText, Folder } from 'lucide-vue-next'
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { router } from '@inertiajs/vue3';
+import { FileText, Folder, Search, X } from 'lucide-vue-next';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 
 interface SearchResult {
-    id: string
-    title: string
-    content: string
-    namespace: string
-    url: string
-    last_modified: number
-    last_modified_human: string
+    id: string;
+    title: string;
+    content: string;
+    namespace: string;
+    url: string;
+    last_modified: number;
+    last_modified_human: string;
     _highlightResult: {
         title: {
-            value: string
-            matchLevel: string
-        }
+            value: string;
+            matchLevel: string;
+        };
         content: {
-            value: string
-            matchLevel: string
-        }
-    }
+            value: string;
+            matchLevel: string;
+        };
+    };
 }
 
 interface SearchResponse {
-    hits: SearchResult[]
-    query: string
-    processing_time_ms: number
-    nb_hits: number
+    hits: SearchResult[];
+    query: string;
+    processing_time_ms: number;
+    nb_hits: number;
 }
 
-const isOpen = ref(false)
-const searchQuery = ref('')
-const searchResults = ref<SearchResult[]>([])
-const isLoading = ref(false)
-const selectedIndex = ref(-1)
-const searchInput = ref<HTMLInputElement>()
-const searchContainer = ref<HTMLDivElement>()
+const isOpen = ref(false);
+const searchQuery = ref('');
+const searchResults = ref<SearchResult[]>([]);
+const isLoading = ref(false);
+const selectedIndex = ref(-1);
+const searchInput = ref<HTMLInputElement>();
+const searchContainer = ref<HTMLDivElement>();
 
-let searchTimeout: ReturnType<typeof setTimeout>
+let searchTimeout: ReturnType<typeof setTimeout>;
 
-const hasResults = computed(() => searchResults.value.length > 0)
+const hasResults = computed(() => searchResults.value.length > 0);
 
 const openSearch = () => {
-    isOpen.value = true
+    isOpen.value = true;
     nextTick(() => {
         setTimeout(() => {
-            searchInput.value?.focus()
-        }, 50)
-    })
-}
+            searchInput.value?.focus();
+        }, 50);
+    });
+};
 
 const closeSearch = () => {
-    isOpen.value = false
-    searchQuery.value = ''
-    searchResults.value = []
-    selectedIndex.value = -1
-}
+    isOpen.value = false;
+    searchQuery.value = '';
+    searchResults.value = [];
+    selectedIndex.value = -1;
+};
 
 const performSearch = async (query: string) => {
     if (!query.trim()) {
-        searchResults.value = []
-        return
+        searchResults.value = [];
+        return;
     }
 
-    isLoading.value = true
-    
+    isLoading.value = true;
+
     try {
-        const response = await fetch(`/api/wiki/search?q=${encodeURIComponent(query)}&limit=8`)
-        const data: SearchResponse = await response.json()
-        searchResults.value = data.hits
+        const response = await fetch(`/api/wiki/search?q=${encodeURIComponent(query)}&limit=8`);
+        const data: SearchResponse = await response.json();
+        searchResults.value = data.hits;
     } catch (error) {
-        console.error('Search failed:', error)
-        searchResults.value = []
+        console.error('Search failed:', error);
+        searchResults.value = [];
     } finally {
-        isLoading.value = false
+        isLoading.value = false;
     }
-}
+};
 
 const debouncedSearch = (query: string) => {
-    clearTimeout(searchTimeout)
+    clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
-        performSearch(query)
-    }, 300)
-}
+        performSearch(query);
+    }, 300);
+};
 
 const selectResult = (result: SearchResult) => {
-    router.visit(result.url)
-    closeSearch()
-}
-
+    router.visit(result.url);
+    closeSearch();
+};
 
 const handleKeydown = (event: KeyboardEvent) => {
     if (!isOpen.value) {
         if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-            event.preventDefault()
-            openSearch()
+            event.preventDefault();
+            openSearch();
         }
-        return
+        return;
     }
 
     switch (event.key) {
         case 'Escape':
-            event.preventDefault()
-            closeSearch()
-            break
+            event.preventDefault();
+            closeSearch();
+            break;
         case 'ArrowDown':
-            event.preventDefault()
-            selectedIndex.value = Math.min(selectedIndex.value + 1, searchResults.value.length - 1)
-            break
+            event.preventDefault();
+            selectedIndex.value = Math.min(selectedIndex.value + 1, searchResults.value.length - 1);
+            break;
         case 'ArrowUp':
-            event.preventDefault()
-            selectedIndex.value = Math.max(selectedIndex.value - 1, -1)
-            break
+            event.preventDefault();
+            selectedIndex.value = Math.max(selectedIndex.value - 1, -1);
+            break;
         case 'Enter':
-            event.preventDefault()
+            event.preventDefault();
             if (selectedIndex.value >= 0 && searchResults.value[selectedIndex.value]) {
-                selectResult(searchResults.value[selectedIndex.value])
+                selectResult(searchResults.value[selectedIndex.value]);
             }
             // Don't close search if no result is selected - keep it open for further searching
-            break
+            break;
     }
-}
+};
 
 const handleClickOutside = (event: MouseEvent) => {
     if (searchContainer.value && !searchContainer.value.contains(event.target as Node)) {
-        closeSearch()
+        closeSearch();
     }
-}
+};
 
 watch(searchQuery, (newQuery) => {
-    selectedIndex.value = -1
-    debouncedSearch(newQuery)
-})
+    selectedIndex.value = -1;
+    debouncedSearch(newQuery);
+});
 
 const handleOpenSearchWidget = (event: CustomEvent) => {
-    openSearch()
+    openSearch();
     if (event.detail?.query) {
         nextTick(() => {
-            searchQuery.value = event.detail.query
-            debouncedSearch(event.detail.query)
-        })
+            searchQuery.value = event.detail.query;
+            debouncedSearch(event.detail.query);
+        });
     }
-}
+};
 
 onMounted(() => {
-    document.addEventListener('keydown', handleKeydown)
-    document.addEventListener('mousedown', handleClickOutside)
-    window.addEventListener('open-search-widget', handleOpenSearchWidget)
-})
+    document.addEventListener('keydown', handleKeydown);
+    document.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('open-search-widget', handleOpenSearchWidget);
+});
 
 onUnmounted(() => {
-    document.removeEventListener('keydown', handleKeydown)
-    document.removeEventListener('mousedown', handleClickOutside)
-    window.removeEventListener('open-search-widget', handleOpenSearchWidget)
-    clearTimeout(searchTimeout)
-})
+    document.removeEventListener('keydown', handleKeydown);
+    document.removeEventListener('mousedown', handleClickOutside);
+    window.removeEventListener('open-search-widget', handleOpenSearchWidget);
+    clearTimeout(searchTimeout);
+});
 
 defineExpose({
     openSearch,
     closeSearch,
-})
+});
 </script>
 
 <template>
     <div ref="searchContainer" class="relative">
         <!-- Search Trigger Button -->
-        <Button 
-            variant="ghost" 
-            size="sm" 
-            class="flex items-center gap-2 text-muted-foreground hover:text-foreground"
-            @click="openSearch"
-        >
+        <Button variant="ghost" size="sm" class="flex items-center gap-2 text-muted-foreground hover:text-foreground" @click="openSearch">
             <Search class="h-4 w-4" />
             <span class="hidden sm:inline">Search...</span>
-            <kbd class="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground ml-auto">
+            <kbd
+                class="ml-auto hidden h-5 items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground select-none sm:inline-flex"
+            >
                 <span class="text-xs">⌘</span>K
             </kbd>
         </Button>
 
         <!-- Search Modal/Popup -->
-        <div 
-            v-if="isOpen"
-            class="fixed inset-0 z-50 flex items-start justify-center bg-black/80 backdrop-blur-sm p-4 sm:p-6 md:p-20"
-        >
+        <div v-if="isOpen" class="fixed inset-0 z-50 flex items-start justify-center bg-black/80 p-4 backdrop-blur-sm sm:p-6 md:p-20">
             <div class="w-full max-w-2xl overflow-hidden rounded-lg border bg-background text-popover-foreground shadow-2xl">
                 <!-- Search Input -->
                 <div class="flex items-center border-b px-3">
@@ -194,7 +187,7 @@ defineExpose({
                         ref="searchInput"
                         v-model="searchQuery"
                         placeholder="Search wiki pages..."
-                        class="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none border-0 ring-0 focus:ring-0 placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                        class="flex h-11 w-full rounded-md border-0 bg-transparent py-3 text-sm ring-0 outline-none placeholder:text-muted-foreground focus:ring-0 disabled:cursor-not-allowed disabled:opacity-50"
                         autofocus
                     />
                     <Button variant="ghost" size="sm" class="h-7 w-7 p-0" @click="closeSearch">
@@ -224,9 +217,9 @@ defineExpose({
                         <div
                             v-for="(result, index) in searchResults"
                             :key="result.id"
-                            class="flex cursor-pointer select-none items-start rounded-sm px-2 py-2 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground"
+                            class="flex cursor-pointer items-start rounded-sm px-2 py-2 text-sm transition-colors outline-none select-none hover:bg-accent hover:text-accent-foreground"
                             :class="{
-                                'bg-accent text-accent-foreground': index === selectedIndex
+                                'bg-accent text-accent-foreground': index === selectedIndex,
                             }"
                             @click="selectResult(result)"
                             @mouseenter="selectedIndex = index"
@@ -235,15 +228,12 @@ defineExpose({
                                 <FileText class="h-3 w-3" />
                             </div>
                             <div class="ml-2 flex-1 overflow-hidden">
-                                <div 
-                                    class="truncate font-medium"
-                                    v-html="result._highlightResult.title.value"
-                                ></div>
-                                <div 
-                                    class="text-xs text-muted-foreground line-clamp-2 mt-0.5 leading-relaxed"
+                                <div class="truncate font-medium" v-html="result._highlightResult.title.value"></div>
+                                <div
+                                    class="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground"
                                     v-html="result._highlightResult.content.value"
                                 ></div>
-                                <div class="flex items-center space-x-2 text-xs text-muted-foreground mt-1">
+                                <div class="mt-1 flex items-center space-x-2 text-xs text-muted-foreground">
                                     <Folder class="h-3 w-3" />
                                     <span>{{ result.namespace }}</span>
                                     <span class="text-xs opacity-50">•</span>
@@ -265,11 +255,15 @@ defineExpose({
                 <div v-if="hasResults" class="border-t p-2 text-xs text-muted-foreground">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center space-x-2">
-                            <kbd class="inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium">
+                            <kbd
+                                class="inline-flex h-5 items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium select-none"
+                            >
                                 ↑↓
                             </kbd>
                             <span>navigate</span>
-                            <kbd class="inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium">
+                            <kbd
+                                class="inline-flex h-5 items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium select-none"
+                            >
                                 ↵
                             </kbd>
                             <span>select</span>
