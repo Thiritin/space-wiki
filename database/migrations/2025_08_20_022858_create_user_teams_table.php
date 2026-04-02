@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('team_type')->default('namespace'); // 'namespace' or 'page'
             $table->integer('sort_order')->default(0);
             $table->timestamps();
-            
+
             $table->unique(['user_id', 'team_name']);
             $table->index(['user_id', 'sort_order']);
         });

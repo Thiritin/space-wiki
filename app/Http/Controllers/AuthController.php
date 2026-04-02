@@ -27,15 +27,15 @@ class AuthController extends Controller
         $claims = $socialiteUser->user ?? [];
         $allowedGroupIds = config('wiki.allowed_group_ids', []);
         $userGroupIds = [];
-        
+
         if (isset($claims['groups']) && is_array($claims['groups'])) {
             $userGroupIds = $claims['groups'];
         } elseif (isset($claims['groups'])) {
             $userGroupIds = [$claims['groups']];
         }
-        
+
         // Check if user has any allowed group access
-        if (!empty($allowedGroupIds) && !array_intersect($allowedGroupIds, $userGroupIds)) {
+        if (! empty($allowedGroupIds) && ! array_intersect($allowedGroupIds, $userGroupIds)) {
             return redirect()->route('login')->withErrors(['access' => 'You are not authorized to access this wiki application.']);
         }
 
@@ -54,6 +54,7 @@ class AuthController extends Controller
     public function logout()
     {
         Auth::logout();
+
         return redirect()->route('login');
     }
 }

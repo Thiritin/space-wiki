@@ -84,7 +84,7 @@ class WikiSearchController extends Controller
             return $content;
         }
 
-        return substr($content, 0, $length) . '...';
+        return substr($content, 0, $length).'...';
     }
 
     private function generateContentExcerpt(string $content, array $queryWords, int $maxLength = 200): string
@@ -95,20 +95,22 @@ class WikiSearchController extends Controller
         $bestScore = 0;
 
         foreach ($queryWords as $word) {
-            if (strlen($word) < 2) continue;
-            
+            if (strlen($word) < 2) {
+                continue;
+            }
+
             $pos = strpos($lowerContent, strtolower($word));
             if ($pos !== false) {
                 $start = max(0, $pos - 80);
                 $end = min(strlen($content), $pos + strlen($word) + 80);
                 $excerpt = substr($content, $start, $end - $start);
-                
+
                 $score = substr_count(strtolower($excerpt), strtolower($word));
                 if ($score > $bestScore) {
                     $bestScore = $score;
                     $bestMatch = [
                         'excerpt' => $excerpt,
-                        'needsEllipsis' => $start > 0 || $end < strlen($content)
+                        'needsEllipsis' => $start > 0 || $end < strlen($content),
                     ];
                 }
             }
@@ -117,8 +119,9 @@ class WikiSearchController extends Controller
         if ($bestMatch) {
             $excerpt = $bestMatch['excerpt'];
             if ($bestMatch['needsEllipsis']) {
-                $excerpt = '...' . trim($excerpt) . '...';
+                $excerpt = '...'.trim($excerpt).'...';
             }
+
             return $excerpt;
         }
 
@@ -127,10 +130,10 @@ class WikiSearchController extends Controller
 
     private function generateHighlights($page, $query): array
     {
-        $queryWords = array_filter(explode(' ', strtolower(trim($query))), function($word) {
+        $queryWords = array_filter(explode(' ', strtolower(trim($query))), function ($word) {
             return strlen($word) > 1;
         });
-        
+
         return [
             'title' => [
                 'value' => $this->highlightText($page->title, $queryWords),
@@ -148,13 +151,13 @@ class WikiSearchController extends Controller
         foreach ($queryWords as $word) {
             if (strlen($word) > 1) {
                 $text = preg_replace(
-                    '/(' . preg_quote($word, '/') . ')/i',
+                    '/('.preg_quote($word, '/').')/i',
                     '<mark>$1</mark>',
                     $text
                 );
             }
         }
-        
+
         return $text;
     }
 
@@ -162,15 +165,15 @@ class WikiSearchController extends Controller
     {
         $lowerText = strtolower($text);
         $matches = 0;
-        
+
         foreach ($queryWords as $word) {
             if (strlen($word) > 1 && strpos($lowerText, strtolower($word)) !== false) {
                 $matches++;
             }
         }
-        
+
         $matchRatio = $matches / count($queryWords);
-        
+
         if ($matchRatio >= 0.8) {
             return 'full';
         } elseif ($matchRatio >= 0.4) {

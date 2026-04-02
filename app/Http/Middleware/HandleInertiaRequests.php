@@ -2,8 +2,8 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\UserTeam;
 use App\Models\Page;
+use App\Models\UserTeam;
 use App\Services\EurofurenceService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
@@ -68,78 +68,79 @@ class HandleInertiaRequests extends Middleware
     private function getTeamNamespaces(Request $request): array
     {
         // Only load teams for authenticated users
-        if (!$request->user()) {
+        if (! $request->user()) {
             return [];
         }
 
         // Temporarily disable cache for debugging
         Cache::forget('team_namespaces');
+
         return Cache::remember('team_namespaces', 300, function () {
             try {
                 \Log::info('HandleInertia: Starting team namespace loading (database-only)');
-                
+
                 // Get all team pages from database
                 $teamPages = Page::where('page_id', 'like', 'team:%')->get();
                 \Log::info('HandleInertia: Got team pages from database', ['count' => count($teamPages)]);
-                
+
                 $teamNamespaces = [];
                 $realNamespaces = []; // Track teams that have actual subpages
-                
+
                 // First pass: find all teams with actual subpages (3+ parts)
                 foreach ($teamPages as $page) {
                     $pageId = $page->page_id;
                     $parts = explode(':', $pageId);
-                    
+
                     if (count($parts) >= 3) {
                         $teamName = $parts[1];
                         $realNamespaces[$teamName] = true;
-                        
-                        if (!isset($teamNamespaces[$teamName])) {
+
+                        if (! isset($teamNamespaces[$teamName])) {
                             $teamNamespaces[$teamName] = [
                                 'name' => $teamName,
                                 'displayName' => ucfirst(str_replace(['_', '-'], ' ', $teamName)),
                                 'href' => route('wiki.show', ['page' => "team:{$teamName}"]),
                                 'type' => 'namespace',
-                                'priority' => 1 // Higher priority for real namespaces
+                                'priority' => 1, // Higher priority for real namespaces
                             ];
                         }
                     }
                 }
-                
+
                 // Second pass: add standalone team pages only if they don't have subpages
                 foreach ($teamPages as $page) {
                     $pageId = $page->page_id;
                     $parts = explode(':', $pageId);
-                    
+
                     if (count($parts) === 2) {
                         $teamName = $parts[1];
-                        
+
                         // Only add if this team doesn't already have subpages
-                        if (!isset($realNamespaces[$teamName])) {
+                        if (! isset($realNamespaces[$teamName])) {
                             // Skip obvious content pages
-                            $skipList = ['index', 'start', 'main', 'home', 'presse', 'press', 'news', 
-                                       'dance_competition', 'dance_competitions', 'event', 'events'];
-                            
-                            if (!in_array(strtolower($teamName), $skipList)) {
+                            $skipList = ['index', 'start', 'main', 'home', 'presse', 'press', 'news',
+                                'dance_competition', 'dance_competitions', 'event', 'events'];
+
+                            if (! in_array(strtolower($teamName), $skipList)) {
                                 // Only include if it doesn't contain obvious content indicators
                                 $contentIndicators = ['competition', 'event', 'news', 'press', 'announcement'];
                                 $isContent = false;
-                                
+
                                 foreach ($contentIndicators as $indicator) {
                                     if (str_contains(strtolower($teamName), $indicator)) {
                                         $isContent = true;
                                         break;
                                     }
                                 }
-                                
-                                if (!$isContent && strlen($teamName) >= 2 && strlen($teamName) <= 30) {
-                                    if (!isset($teamNamespaces[$teamName])) {
+
+                                if (! $isContent && strlen($teamName) >= 2 && strlen($teamName) <= 30) {
+                                    if (! isset($teamNamespaces[$teamName])) {
                                         $teamNamespaces[$teamName] = [
                                             'name' => $teamName,
                                             'displayName' => ucfirst(str_replace(['_', '-'], ' ', $teamName)),
                                             'href' => route('wiki.show', ['page' => "team:{$teamName}"]),
                                             'type' => 'page',
-                                            'priority' => 2 // Lower priority for standalone pages
+                                            'priority' => 2, // Lower priority for standalone pages
                                         ];
                                     }
                                 }
@@ -147,29 +148,32 @@ class HandleInertiaRequests extends Middleware
                         }
                     }
                 }
-                
+
                 // Sort by priority first, then alphabetically
-                uasort($teamNamespaces, function($a, $b) {
+                uasort($teamNamespaces, function ($a, $b) {
                     if ($a['priority'] !== $b['priority']) {
                         return $a['priority'] <=> $b['priority'];
                     }
+
                     return strcmp($a['displayName'], $b['displayName']);
                 });
-                
+
                 // Remove priority from response
-                $result = array_map(function($team) {
+                $result = array_map(function ($team) {
                     unset($team['priority']);
+
                     return $team;
                 }, array_values($teamNamespaces));
-                
+
                 \Log::info('HandleInertia: Final team namespaces result', ['count' => count($result), 'teams' => $result]);
-                
+
                 return $result;
-                
+
             } catch (\Exception $e) {
                 \Log::error('Failed to load team namespaces in HandleInertia', [
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
+
                 return [];
             }
         });
@@ -181,7 +185,7 @@ class HandleInertiaRequests extends Middleware
     private function getUserTeams(Request $request): array
     {
         // Only load user teams for authenticated users
-        if (!$request->user()) {
+        if (! $request->user()) {
             return [];
         }
 
@@ -207,29 +211,29 @@ class HandleInertiaRequests extends Middleware
     private function getCurrentEF(Request $request): ?array
     {
         // Only load for authenticated users
-        if (!$request->user()) {
+        if (! $request->user()) {
             return null;
         }
 
         try {
-            $efService = new EurofurenceService();
+            $efService = new EurofurenceService;
             $currentEF = $efService->getCurrentEF();
-            
-            if (!$currentEF) {
+
+            if (! $currentEF) {
                 return null;
             }
-            
+
             // Try to get the title from the database
-            $efPage = Page::where('page_id', $currentEF . ':index')
+            $efPage = Page::where('page_id', $currentEF.':index')
                 ->orWhere('page_id', $currentEF)
                 ->first();
-            
+
             // Generate a better title
             $year = (int) substr($currentEF, 2); // Extract year from ef29
             $title = $efPage && $efPage->title && $efPage->title !== 'Index'
-                ? $efPage->title 
+                ? $efPage->title
                 : "Eurofurence {$year}";
-            
+
             return [
                 'id' => $currentEF,
                 'title' => $title,
@@ -237,6 +241,7 @@ class HandleInertiaRequests extends Middleware
             ];
         } catch (\Exception $e) {
             \Log::error('Failed to load current EF', ['error' => $e->getMessage()]);
+
             return null;
         }
     }
@@ -247,14 +252,14 @@ class HandleInertiaRequests extends Middleware
     private function getArchivedEFs(Request $request): array
     {
         // Only load for authenticated users
-        if (!$request->user()) {
+        if (! $request->user()) {
             return [];
         }
 
         try {
-            $efService = new EurofurenceService();
+            $efService = new EurofurenceService;
             $historicalEFs = $efService->getOldEFs(); // This excludes the current EF
-            
+
             // Format for sidebar display
             return array_map(function ($ef) {
                 return [
@@ -267,8 +272,8 @@ class HandleInertiaRequests extends Middleware
             }, $historicalEFs);
         } catch (\Exception $e) {
             \Log::error('Failed to load archived EFs', ['error' => $e->getMessage()]);
+
             return [];
         }
     }
-
 }

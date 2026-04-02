@@ -1,27 +1,27 @@
 <?php
 
+use App\Http\Controllers\FavoriteController;
+use App\Http\Controllers\ImageController;
+use App\Http\Controllers\TeamController;
+use App\Http\Controllers\UserTeamController;
 use App\Http\Controllers\WikiController;
 use App\Http\Controllers\WikiSearchController;
-use App\Http\Controllers\TeamController;
-use App\Http\Controllers\ImageController;
-use App\Http\Controllers\FavoriteController;
-use App\Http\Controllers\UserTeamController;
+use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 Route::get('/', function () {
     if (auth()->check()) {
         return app(WikiController::class)->show(request(), 'team:index');
     }
+
     return redirect()->route('login');
 })->name('dashboard');
 
-
 Route::middleware(['auth'])->group(function () {
-    // DokuWiki compatibility endpoints 
+    // DokuWiki compatibility endpoints
     Route::get('/lib/exe/detail.php', [ImageController::class, 'detail'])->name('dokuwiki.detail');
     Route::get('/lib/exe/fetch.php', ImageController::class)->name('dokuwiki.fetch');
-    
+
     // Wiki routes
     Route::prefix('wiki')->name('wiki.')->group(function () {
         // Images
@@ -31,22 +31,23 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{page}/history', [WikiController::class, 'history'])->name('history');
         Route::get('/{page?}', [WikiController::class, 'show'])->name('show')->where('page', '.*');
     });
-    
+
     // API routes for wiki search
     Route::prefix('api/wiki')->name('api.wiki.')->group(function () {
         Route::get('/search', [WikiSearchController::class, 'search'])->name('search');
         Route::get('/suggest', [WikiSearchController::class, 'suggest'])->name('suggest');
         Route::get('/debug-teams', [TeamController::class, 'debugTeams'])->name('debug-teams');
         Route::get('/debug-props', function () {
-            $middleware = new \App\Http\Middleware\HandleInertiaRequests();
+            $middleware = new HandleInertiaRequests;
             $sharedData = $middleware->share(request());
+
             return response()->json([
                 'teams' => $sharedData['teams'] ?? 'not_set',
-                'teams_count' => is_array($sharedData['teams'] ?? null) ? count($sharedData['teams']) : 'not_array'
+                'teams_count' => is_array($sharedData['teams'] ?? null) ? count($sharedData['teams']) : 'not_array',
             ]);
         })->name('debug-props');
     });
-    
+
     // API routes for favorites
     Route::prefix('api/favorites')->name('api.favorites.')->group(function () {
         Route::get('/', [FavoriteController::class, 'index'])->name('index');
@@ -56,7 +57,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/reorder', [FavoriteController::class, 'updateOrder'])->name('reorder');
         Route::delete('/{id}', [FavoriteController::class, 'destroy'])->name('destroy');
     });
-    
+
     // API routes for user teams
     Route::prefix('api/user-teams')->name('api.user-teams.')->group(function () {
         Route::get('/', [UserTeamController::class, 'index'])->name('index');

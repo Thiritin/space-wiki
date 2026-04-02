@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Laravel\Scout\Searchable;
-use Carbon\Carbon;
 
 class Page extends Model
 {
@@ -65,7 +65,7 @@ class Page extends Model
 
     public function getLastModifiedHumanAttribute(): string
     {
-        return $this->last_modified > 0 
+        return $this->last_modified > 0
             ? Carbon::createFromTimestamp($this->last_modified)->diffForHumans()
             : 'Unknown';
     }
@@ -77,20 +77,20 @@ class Page extends Model
 
     public function getSizeBytesHumanAttribute(): string
     {
-        if (!$this->size_bytes) {
+        if (! $this->size_bytes) {
             return '0 B';
         }
-        
+
         $units = ['B', 'KB', 'MB', 'GB'];
         $bytes = $this->size_bytes;
         $i = 0;
-        
+
         while ($bytes >= 1024 && $i < count($units) - 1) {
             $bytes /= 1024;
             $i++;
         }
-        
-        return round($bytes, 1) . ' ' . $units[$i];
+
+        return round($bytes, 1).' '.$units[$i];
     }
 
     public function getPermissionLevelAttribute(): string
@@ -98,17 +98,17 @@ class Page extends Model
         if ($this->permission === null) {
             return 'Unknown';
         }
-        
+
         // DokuWiki permission levels
         $levels = [
             0 => 'None',
             1 => 'Read',
-            2 => 'Edit', 
+            2 => 'Edit',
             4 => 'Create',
             8 => 'Upload',
             16 => 'Delete',
         ];
-        
+
         return $levels[$this->permission] ?? "Level {$this->permission}";
     }
 
@@ -127,31 +127,31 @@ class Page extends Model
         if (str_ends_with($this->page_id, ':index')) {
             // For team:it:index, show subpages of team:it
             $parentNamespace = substr($this->page_id, 0, -6); // Remove ':index'
-            $basePattern = $parentNamespace . ':%';
+            $basePattern = $parentNamespace.':%';
             $baseDepth = $this->depth - 1 + 1; // Parent depth + 1
         } else {
             // Normal case - show direct children
-            $basePattern = $this->page_id . ':%';
+            $basePattern = $this->page_id.':%';
             $baseDepth = $this->depth + 1;
         }
-        
+
         // First check the total count to avoid loading too many entries
         $totalCount = static::where('page_id', 'like', $basePattern)
             ->where('depth', '>=', $baseDepth)
             ->where('depth', '<=', $baseDepth + 1) // 2 levels deep
             ->where('page_id', '!=', $this->page_id) // Exclude self
             ->count();
-        
+
         // If there are more than 100 entries, don't render subpages for performance
         if ($totalCount > 100) {
             return [
                 '_meta' => [
                     'hidden_due_to_limit' => true,
-                    'total_count' => $totalCount
-                ]
+                    'total_count' => $totalCount,
+                ],
             ];
         }
-        
+
         // Get pages up to 2 levels deep
         $allSubpages = static::where('page_id', 'like', $basePattern)
             ->where('depth', '>=', $baseDepth)
@@ -159,23 +159,23 @@ class Page extends Model
             ->where('page_id', '!=', $this->page_id) // Exclude self
             ->orderBy('page_id') // Order by full path to maintain hierarchy
             ->get();
-        
+
         $result = [];
         $processedNamespaces = [];
-        
+
         foreach ($allSubpages as $page) {
             $depth = $page->depth;
             $isLevel1 = $depth === $baseDepth;
             $isLevel2 = $depth === $baseDepth + 1;
-            
+
             if ($isLevel1) {
                 // Level 1: Direct children
                 // Use page title if available and not generic, otherwise use formatted namespace
                 $displayTitle = $page->title;
-                if (!$displayTitle || $this->isGenericTitle($displayTitle)) {
+                if (! $displayTitle || $this->isGenericTitle($displayTitle)) {
                     $displayTitle = $this->formatNamespaceTitle($page->page_id);
                 }
-                
+
                 $result[] = [
                     'id' => $page->page_id,
                     'title' => $displayTitle,
@@ -184,26 +184,26 @@ class Page extends Model
                     'lastModified' => $page->last_modified,
                     'type' => 'page',
                     'level' => 1,
-                    'isFolder' => $this->hasSubpages($page->page_id, $baseDepth + 1)
+                    'isFolder' => $this->hasSubpages($page->page_id, $baseDepth + 1),
                 ];
-                
+
                 // Track this namespace for level 2 processing
                 $processedNamespaces[$page->page_id] = true;
             } elseif ($isLevel2) {
                 // Level 2: Check if parent namespace exists or create folder entry
                 $parentPageId = $this->getParentPageId($page->page_id);
-                
+
                 // If parent doesn't exist as a page, create a folder entry
-                if (!isset($processedNamespaces[$parentPageId])) {
-                    $parentPage = static::findByPageId($parentPageId . ':index') ?: static::findByPageId($parentPageId);
-                    
+                if (! isset($processedNamespaces[$parentPageId])) {
+                    $parentPage = static::findByPageId($parentPageId.':index') ?: static::findByPageId($parentPageId);
+
                     // Use page title if available and not generic, otherwise use formatted namespace
-                    if ($parentPage && $parentPage->title && !$this->isGenericTitle($parentPage->title)) {
+                    if ($parentPage && $parentPage->title && ! $this->isGenericTitle($parentPage->title)) {
                         $folderTitle = $parentPage->title;
                     } else {
                         $folderTitle = $this->formatNamespaceTitle($parentPageId);
                     }
-                    
+
                     $result[] = [
                         'id' => $parentPageId,
                         'title' => $folderTitle,
@@ -212,19 +212,19 @@ class Page extends Model
                         'lastModified' => 0,
                         'type' => 'folder',
                         'level' => 1,
-                        'isFolder' => true
+                        'isFolder' => true,
                     ];
-                    
+
                     $processedNamespaces[$parentPageId] = true;
                 }
-                
+
                 // Add the level 2 page as indented
                 // Use page title if available and not generic, otherwise use formatted namespace
                 $displayTitle = $page->title;
-                if (!$displayTitle || $this->isGenericTitle($displayTitle)) {
+                if (! $displayTitle || $this->isGenericTitle($displayTitle)) {
                     $displayTitle = $this->formatNamespaceTitle($page->page_id);
                 }
-                
+
                 $result[] = [
                     'id' => $page->page_id,
                     'title' => $displayTitle,
@@ -233,24 +233,24 @@ class Page extends Model
                     'lastModified' => $page->last_modified,
                     'type' => 'page',
                     'level' => 2,
-                    'isFolder' => false
+                    'isFolder' => false,
                 ];
             }
         }
-        
+
         return $result;
     }
-    
+
     /**
      * Check if a page has subpages at a specific depth
      */
     private function hasSubpages(string $pageId, int $targetDepth): bool
     {
-        return static::where('page_id', 'like', $pageId . ':%')
+        return static::where('page_id', 'like', $pageId.':%')
             ->where('depth', $targetDepth)
             ->exists();
     }
-    
+
     /**
      * Get parent page ID from a page ID
      */
@@ -258,9 +258,10 @@ class Page extends Model
     {
         $parts = explode(':', $pageId);
         array_pop($parts); // Remove last part
+
         return implode(':', $parts);
     }
-    
+
     /**
      * Format namespace title from page ID
      */
@@ -268,15 +269,17 @@ class Page extends Model
     {
         $parts = explode(':', $pageId);
         $lastPart = end($parts);
+
         return ucfirst(str_replace(['_', '-'], ' ', $lastPart));
     }
-    
+
     /**
      * Check if a title is generic and should not be used for folder names
      */
     private function isGenericTitle(string $title): bool
     {
         $genericTitles = ['index', 'main', 'home', 'start', 'default'];
+
         return in_array(strtolower(trim($title)), $genericTitles);
     }
 
@@ -294,9 +297,9 @@ class Page extends Model
     }
 
     public static function createFromDokuWiki(
-        string $pageId, 
-        array $pageInfo, 
-        string $content, 
+        string $pageId,
+        array $pageInfo,
+        string $content,
         string $htmlContent = '',
         array $tableOfContents = [],
         string $excerpt = ''
@@ -305,7 +308,7 @@ class Page extends Model
         $namespace = static::extractNamespace($pageId);
         $cleanContent = static::cleanContent($content);
         $depth = substr_count($pageId, ':');
-        
+
         return static::updateOrCreate(
             ['page_id' => $pageId],
             [
@@ -329,12 +332,13 @@ class Page extends Model
         if (preg_match('/^======\s*(.+?)\s*======/m', $content, $matches)) {
             return html_entity_decode(trim($matches[1]), ENT_QUOTES | ENT_HTML5, 'UTF-8');
         }
-        
+
         if (preg_match('/^=====\s*(.+?)\s*=====/m', $content, $matches)) {
             return html_entity_decode(trim($matches[1]), ENT_QUOTES | ENT_HTML5, 'UTF-8');
         }
-        
+
         $parts = explode(':', $pageId);
+
         return ucfirst(str_replace('_', ' ', end($parts)));
     }
 
@@ -342,6 +346,7 @@ class Page extends Model
     {
         $parts = explode(':', $pageId);
         array_pop($parts);
+
         return implode(':', $parts) ?: 'root';
     }
 
@@ -352,15 +357,15 @@ class Page extends Model
         $content = preg_replace('/====\s*(.+?)\s*====/', '$1', $content);
         $content = preg_replace('/===\s*(.+?)\s*===/', '$1', $content);
         $content = preg_replace('/==\s*(.+?)\s*==/', '$1', $content);
-        
+
         $content = preg_replace('/\[\[([^\]]+)\]\]/', '$1', $content);
         $content = preg_replace('/\{\{([^}]+)\}\}/', '', $content);
         $content = preg_replace('/^\s*[\*\-]\s*/m', '', $content);
         $content = preg_replace('/^\s*\d+\.\s*/m', '', $content);
-        
+
         $content = strip_tags($content);
         $content = preg_replace('/\s+/', ' ', $content);
-        
+
         return trim($content);
     }
 }

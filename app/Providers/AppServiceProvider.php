@@ -25,11 +25,12 @@ class AppServiceProvider extends ServiceProvider
     {
         Socialite::extend('identity', function ($app) {
             $config = $app['config']['services.identity'];
+
             return Socialite::buildProvider(SocialiteIdentityProvider::class, $config);
         });
 
         resolve(EngineManager::class)->extend('typesense', function () {
-            return new ScoutTypesenseEngine();
+            return new ScoutTypesenseEngine;
         });
     }
 }

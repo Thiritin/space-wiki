@@ -19,10 +19,10 @@ return new class extends Migration
             $table->string('page_url');
             $table->integer('sort_order')->default(0);
             $table->timestamps();
-            
+
             // Prevent duplicate favorites per user
             $table->unique(['user_id', 'page_id']);
-            
+
             // Index for faster ordering queries
             $table->index(['user_id', 'sort_order']);
         });

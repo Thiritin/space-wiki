@@ -2,12 +2,13 @@
 
 namespace App\Services;
 
-use Typesense\Client;
 use Illuminate\Support\Facades\Log;
+use Typesense\Client;
 
 class TypesenseService
 {
     private Client $client;
+
     private string $collectionName;
 
     public function __construct()
@@ -31,6 +32,7 @@ class TypesenseService
     {
         try {
             $this->client->collections[$this->collectionName]->retrieve();
+
             return true;
         } catch (\Exception $e) {
             return $this->createCollection();
@@ -79,12 +81,14 @@ class TypesenseService
 
             $this->client->collections->create($schema);
             Log::info('Typesense collection created successfully', ['collection' => $this->collectionName]);
+
             return true;
         } catch (\Exception $e) {
             Log::error('Failed to create Typesense collection', [
                 'collection' => $this->collectionName,
                 'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
@@ -93,12 +97,14 @@ class TypesenseService
     {
         try {
             $this->client->collections[$this->collectionName]->documents->create($document);
+
             return true;
         } catch (\Exception $e) {
             Log::error('Failed to index document in Typesense', [
                 'document_id' => $document['id'] ?? 'unknown',
                 'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
@@ -107,12 +113,14 @@ class TypesenseService
     {
         try {
             $this->client->collections[$this->collectionName]->documents[$document['id']]->update($document);
+
             return true;
         } catch (\Exception $e) {
             Log::error('Failed to update document in Typesense', [
                 'document_id' => $document['id'] ?? 'unknown',
                 'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
@@ -121,12 +129,14 @@ class TypesenseService
     {
         try {
             $this->client->collections[$this->collectionName]->documents[$documentId]->delete();
+
             return true;
         } catch (\Exception $e) {
             Log::error('Failed to delete document from Typesense', [
                 'document_id' => $documentId,
                 'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
@@ -135,6 +145,7 @@ class TypesenseService
     {
         try {
             $this->client->collections[$this->collectionName]->documents[$documentId]->retrieve();
+
             return true;
         } catch (\Exception $e) {
             return false;
@@ -151,12 +162,14 @@ class TypesenseService
             ], $options);
 
             $result = $this->client->collections[$this->collectionName]->documents->search($searchParams);
+
             return $result['hits'] ?? [];
         } catch (\Exception $e) {
             Log::error('Failed to search Typesense', [
                 'query' => $query,
                 'error' => $e->getMessage(),
             ]);
+
             return [];
         }
     }
@@ -170,6 +183,7 @@ class TypesenseService
                 'collection' => $this->collectionName,
                 'error' => $e->getMessage(),
             ]);
+
             return null;
         }
     }
