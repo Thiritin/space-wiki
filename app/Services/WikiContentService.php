@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Models\Page;
+use App\Models\WikiSyncLog;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class WikiContentService
@@ -32,15 +32,15 @@ class WikiContentService
 
             $batchSize = 50; // Process in batches to prevent timeouts
             $batches = array_chunk($pages, $batchSize);
-            
-            echo "Found {$totalPages} pages, processing in " . count($batches) . " batches of {$batchSize}...\n";
+
+            echo "Found {$totalPages} pages, processing in ".count($batches)." batches of {$batchSize}...\n";
 
             foreach ($batches as $batchIndex => $batch) {
-                echo "Processing batch " . ($batchIndex + 1) . "/" . count($batches) . "...\n";
-                
+                echo 'Processing batch '.($batchIndex + 1).'/'.count($batches)."...\n";
+
                 foreach ($batch as $page) {
                     $stats['processed']++;
-                    
+
                     if ($this->syncPage($page['id'])) {
                         $existingPage = Page::findByPageId($page['id']);
                         if ($existingPage && $existingPage->wasRecentlyCreated) {
@@ -57,12 +57,12 @@ class WikiContentService
                         echo "Progress: {$stats['processed']}/{$totalPages} pages processed\n";
                     }
                 }
-                
+
                 // Small delay between batches to prevent overloading
                 usleep(100000); // 0.1 second
             }
 
-            $this->updateLastSyncTime();
+            $this->logSync('full', $stats);
             Log::info('Wiki content sync completed', $stats);
 
         } catch (\Exception $e) {
@@ -83,17 +83,17 @@ class WikiContentService
         ];
 
         try {
-            $lastSync = $this->getLastSyncTime();
+            $lastSync = WikiSyncLog::lastSyncTimestamp();
             $recentChanges = $this->dokuWikiService->getRecentChanges($lastSync);
-            
+
             Log::info('Starting incremental wiki sync', [
                 'last_sync' => $lastSync,
-                'recent_changes' => count($recentChanges)
+                'recent_changes' => count($recentChanges),
             ]);
 
             foreach ($recentChanges as $change) {
                 $stats['processed']++;
-                
+
                 if ($this->syncPage($change['id'])) {
                     $existingPage = Page::findByPageId($change['id']);
                     if ($existingPage && $existingPage->wasRecentlyCreated) {
@@ -106,7 +106,7 @@ class WikiContentService
                 }
             }
 
-            $this->updateLastSyncTime();
+            $this->logSync('incremental', $stats);
             Log::info('Incremental wiki sync completed', $stats);
 
         } catch (\Exception $e) {
@@ -121,17 +121,19 @@ class WikiContentService
     {
         try {
             $pageInfo = $this->dokuWikiService->getPageInfo($pageId);
-            
+
             if (empty($pageInfo)) {
                 Log::warning('Page info not found', ['page_id' => $pageId]);
+
                 return false;
             }
 
             $content = $this->dokuWikiService->getPage($pageId);
             $htmlContent = $this->dokuWikiService->getPageHtml($pageId);
-            
+
             if (empty($content)) {
                 Log::warning('Page content is empty', ['page_id' => $pageId]);
+
                 return false;
             }
 
@@ -140,57 +142,65 @@ class WikiContentService
             $excerpt = $this->dokuWikiService->generateExcerpt($content);
 
             $page = Page::createFromDokuWiki(
-                $pageId, 
-                $pageInfo, 
-                $content, 
+                $pageId,
+                $pageInfo,
+                $content,
                 $htmlContent,
                 $tableOfContents,
                 $excerpt
             );
             $page->searchable();
-            
+
             return true;
 
         } catch (\Exception $e) {
             Log::error('Failed to sync page', [
                 'page_id' => $pageId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
 
-
-    private function getLastSyncTime(): int
+    private function logSync(string $type, array $stats): void
     {
-        return Cache::get('wiki_last_sync_time', 0);
-    }
-
-    private function updateLastSyncTime(): void
-    {
-        Cache::forever('wiki_last_sync_time', time());
+        WikiSyncLog::create([
+            'type' => $type,
+            'processed' => $stats['processed'],
+            'updated' => $stats['updated'] + $stats['indexed'],
+            'errors' => $stats['errors'],
+            'synced_at' => now(),
+        ]);
     }
 
     public function getStats(): array
     {
         try {
             $documentCount = Page::count();
-            
+            $lastSync = WikiSyncLog::lastSyncTimestamp();
+            $lastFullSync = WikiSyncLog::lastFullSync();
+
             return [
                 'collection_exists' => true,
                 'document_count' => $documentCount,
-                'last_sync' => $this->getLastSyncTime(),
-                'last_sync_human' => $this->getLastSyncTime() > 0 
-                    ? Carbon::createFromTimestamp($this->getLastSyncTime())->diffForHumans()
+                'last_sync' => $lastSync,
+                'last_sync_human' => $lastSync > 0
+                    ? Carbon::createFromTimestamp($lastSync)->diffForHumans()
+                    : 'Never',
+                'last_full_sync_human' => $lastFullSync
+                    ? $lastFullSync->synced_at->diffForHumans()
                     : 'Never',
             ];
         } catch (\Exception $e) {
             Log::error('Failed to get wiki stats', ['error' => $e->getMessage()]);
+
             return [
                 'collection_exists' => false,
                 'document_count' => 0,
                 'last_sync' => 0,
                 'last_sync_human' => 'Error',
+                'last_full_sync_human' => 'Error',
             ];
         }
     }
