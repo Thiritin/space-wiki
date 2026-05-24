@@ -15,6 +15,7 @@ return [
 
     'dokuwiki' => [
         'uri' => env('DOKUWIKI_URI'),
+        'token' => env('DOKUWIKI_TOKEN'),
         'username' => env('DOKUWIKI_USERNAME'),
         'password' => env('DOKUWIKI_PASSWORD'),
         'jsonrpc_endpoint' => env('DOKUWIKI_JSONRPC_ENDPOINT', '/lib/exe/xmlrpc.php'),

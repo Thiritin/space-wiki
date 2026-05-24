@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Page;
 use App\Services\DokuWikiService;
 use App\Services\EurofurenceService;
-use App\Models\Page;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class WikiController extends Controller
 {
@@ -22,19 +23,19 @@ class WikiController extends Controller
         try {
             // Load all pages from database
             $pages = Page::select('page_id as id', 'title', 'namespace', 'last_modified', 'url')
-                        ->orderBy('last_modified', 'desc')
-                        ->get()
-                        ->map(function ($page) {
-                            return [
-                                'id' => $page->id,
-                                'title' => $page->title,
-                                'namespace' => $page->namespace,
-                                'size' => strlen($page->content ?? '') * 8, // Approximate size in bits
-                                'lastModified' => $page->last_modified,
-                            ];
-                        })
-                        ->toArray();
-            
+                ->orderBy('last_modified', 'desc')
+                ->get()
+                ->map(function ($page) {
+                    return [
+                        'id' => $page->id,
+                        'title' => $page->title,
+                        'namespace' => $page->namespace,
+                        'size' => strlen($page->content ?? '') * 8, // Approximate size in bits
+                        'lastModified' => $page->last_modified,
+                    ];
+                })
+                ->toArray();
+
             // Get recent changes from database instead of API
             $recentChanges = Page::orderBy('last_modified', 'desc')
                 ->take(10)
@@ -49,12 +50,12 @@ class WikiController extends Controller
                     ];
                 })
                 ->toArray();
-            
+
             // Get the main wiki index page content from database only
             $indexPageContent = '';
             $indexPageInfo = null;
             $extractedTitle = null;
-            
+
             // Try to find a suitable index page from database
             $indexPages = ['start', 'index', 'main', 'home', 'wiki'];
             foreach ($indexPages as $indexPageId) {
@@ -74,7 +75,7 @@ class WikiController extends Controller
                     break;
                 }
             }
-            
+
             return Inertia::render('Wiki/Index', [
                 'pages' => $pages,
                 'recentChanges' => $recentChanges,
@@ -97,7 +98,7 @@ class WikiController extends Controller
 
     public function show(Request $request, ?string $page = null)
     {
-        if (!$page) {
+        if (! $page) {
             $page = 'start'; // Default DokuWiki start page
         }
 
@@ -110,12 +111,12 @@ class WikiController extends Controller
         try {
             // Load from database only - no DokuWiki API fallbacks
             $pageModel = Page::findByPageId($page);
-            
-            if (!$pageModel || !$pageModel->html_content) {
+
+            if (! $pageModel || ! $pageModel->html_content) {
                 // Page not found in database, try index page or generate sitemap
                 throw new \Exception('Page not found in database');
             }
-            
+
             // Load from database with enhanced metadata
             $pageInfo = [
                 'lastModified' => $pageModel->last_modified,
@@ -127,7 +128,7 @@ class WikiController extends Controller
             $content = $pageModel->html_content;
             $content = $this->transformDokuWikiLinks($content);
             $extractedData = $this->extractH1Title($content);
-            
+
             return Inertia::render('Wiki/Page', [
                 'page' => $page,
                 'pageInfo' => $pageInfo,
@@ -139,9 +140,9 @@ class WikiController extends Controller
             ]);
         } catch (\Exception $e) {
             // Try fallback: if page doesn't exist, try {page}:index (database only)
-            $indexPage = $page . ':index';
+            $indexPage = $page.':index';
             $indexPageModel = Page::findByPageId($indexPage);
-            
+
             if ($indexPageModel && $indexPageModel->html_content) {
                 $pageInfo = [
                     'lastModified' => $indexPageModel->last_modified,
@@ -153,7 +154,7 @@ class WikiController extends Controller
                 $content = $indexPageModel->html_content;
                 $content = $this->transformDokuWikiLinks($content);
                 $extractedData = $this->extractH1Title($content);
-                
+
                 return Inertia::render('Wiki/Page', [
                     'page' => $indexPage,
                     'pageInfo' => $pageInfo,
@@ -170,13 +171,12 @@ class WikiController extends Controller
         }
     }
 
-
     public function history(string $page)
     {
         // Load page info from database only
         $pageModel = Page::findByPageId($page);
-        
-        if (!$pageModel) {
+
+        if (! $pageModel) {
             return Inertia::render('Wiki/History', [
                 'page' => $page,
                 'error' => 'Page not found in database.',
@@ -185,7 +185,7 @@ class WikiController extends Controller
                 'breadcrumbs' => $this->generateBreadcrumbs($page, 'History'),
             ]);
         }
-        
+
         // Since we don't store version history in the database,
         // show only the current version
         $versions = [
@@ -195,9 +195,9 @@ class WikiController extends Controller
                 'summary' => 'Current version',
                 'size' => $pageModel->size_bytes ?? strlen($pageModel->content ?? ''),
                 'revision' => $pageModel->revision,
-            ]
+            ],
         ];
-        
+
         $pageInfo = [
             'lastModified' => $pageModel->last_modified,
             'author' => 'DokuWiki',
@@ -205,7 +205,7 @@ class WikiController extends Controller
             'revision' => $pageModel->revision,
             'permission' => $pageModel->permission,
         ];
-        
+
         return Inertia::render('Wiki/History', [
             'page' => $page,
             'pageInfo' => $pageInfo,
@@ -219,7 +219,7 @@ class WikiController extends Controller
         try {
             // Proxy to DokuWiki for attachments only
             $attachments = $this->dokuwikiService->getAttachments($namespace);
-            
+
             return Inertia::render('Wiki/Attachments', [
                 'namespace' => $namespace,
                 'attachments' => $attachments,
@@ -242,23 +242,23 @@ class WikiController extends Controller
                 // Extract unique team namespaces from database
                 $teamNamespaces = [];
                 $excludedNames = ['index', 'start', 'main', 'home', 'presse', 'press', 'news'];
-                
+
                 $teamPages = Page::where('page_id', 'like', 'team:%')->get();
-                
+
                 foreach ($teamPages as $page) {
                     $pageId = $page->page_id;
                     $parts = explode(':', $pageId);
-                    
+
                     if (count($parts) >= 2) {
                         $teamName = $parts[1]; // e.g., 'it', 'accounting', 'security'
-                        
+
                         // Skip excluded common names
                         if (in_array(strtolower($teamName), $excludedNames)) {
                             continue;
                         }
-                        
+
                         // Only add if we haven't seen this team namespace before
-                        if (!isset($teamNamespaces[$teamName])) {
+                        if (! isset($teamNamespaces[$teamName])) {
                             $teamNamespaces[$teamName] = [
                                 'name' => $teamName,
                                 'displayName' => ucfirst(str_replace(['_', '-'], ' ', $teamName)),
@@ -267,15 +267,15 @@ class WikiController extends Controller
                         }
                     }
                 }
-                
+
                 // Sort teams alphabetically by display name
-                uasort($teamNamespaces, function($a, $b) {
+                uasort($teamNamespaces, function ($a, $b) {
                     return strcmp($a['displayName'], $b['displayName']);
                 });
-                
+
                 return array_values($teamNamespaces);
             });
-            
+
             return response()->json($teamNamespaces);
         } catch (\Exception $e) {
             return response()->json([
@@ -285,12 +285,12 @@ class WikiController extends Controller
         }
     }
 
-    private function generateNamespaceSitemap(string $namespace): \Inertia\Response
+    private function generateNamespaceSitemap(string $namespace): Response
     {
         try {
             // Load pages from database instead of DokuWiki API
-            $namespacePages = Page::where('namespace', 'like', $namespace . '%')
-                ->orWhere('page_id', 'like', $namespace . ':%')
+            $namespacePages = Page::where('namespace', 'like', $namespace.'%')
+                ->orWhere('page_id', 'like', $namespace.':%')
                 ->orderBy('title')
                 ->get()
                 ->map(function ($page) {
@@ -304,13 +304,13 @@ class WikiController extends Controller
                     ];
                 })
                 ->toArray();
-            
+
             // Generate sitemap content using dynamic subpages
             $parentPage = Page::findByPageId($namespace);
             $subpages = $parentPage ? $parentPage->subpages : [];
-            
+
             $sitemapContent = $this->generateSitemapHtml($namespace, $namespacePages, $subpages);
-            
+
             return Inertia::render('Wiki/Page', [
                 'page' => $namespace,
                 'pageInfo' => [
@@ -335,41 +335,41 @@ class WikiController extends Controller
             ]);
         }
     }
-    
+
     private function generateSitemapHtml(string $namespace, array $pages, array $subpages = []): string
     {
         $namespaceParts = explode(':', $namespace);
         $displayName = ucfirst(str_replace(['_', '-'], ' ', end($namespaceParts)));
-        
+
         $html = "<div class='namespace-sitemap'>";
         $html .= "<h1>📁 {$displayName} Namespace</h1>";
-        $html .= "<p class='text-gray-600 mb-6'>This namespace contains " . count($pages) . " page(s):</p>";
-        
+        $html .= "<p class='text-gray-600 mb-6'>This namespace contains ".count($pages).' page(s):</p>';
+
         if (empty($pages)) {
             $html .= "<div class='text-center py-8 text-gray-500'>";
-            $html .= "<p>No pages found in this namespace.</p>";
-            $html .= "</div>";
+            $html .= '<p>No pages found in this namespace.</p>';
+            $html .= '</div>';
         } else {
             $html .= "<div class='grid gap-4'>";
             foreach ($pages as $page) {
-                $relativeId = str_replace($namespace . ':', '', $page['id']);
+                $relativeId = str_replace($namespace.':', '', $page['id']);
                 $sizeKb = round($page['size'] / 1024, 1);
                 $lastModified = $page['lastModified'] ? date('M j, Y', $page['lastModified']) : 'Unknown';
-                
+
                 $html .= "<div class='border rounded-lg p-4 hover:bg-gray-50'>";
                 $html .= "<h3><a href='{$page['href']}' class='text-blue-600 hover:text-blue-800 font-medium'>{$page['title']}</a></h3>";
                 $html .= "<p class='text-sm text-gray-600'>Path: <code>{$relativeId}</code></p>";
                 $html .= "<div class='flex justify-between text-xs text-gray-500 mt-2'>";
                 $html .= "<span>Size: {$sizeKb} KB</span>";
                 $html .= "<span>Modified: {$lastModified}</span>";
-                $html .= "</div>";
-                $html .= "</div>";
+                $html .= '</div>';
+                $html .= '</div>';
             }
-            $html .= "</div>";
+            $html .= '</div>';
         }
-        
-        $html .= "</div>";
-        
+
+        $html .= '</div>';
+
         return $html;
     }
 
@@ -377,7 +377,7 @@ class WikiController extends Controller
     {
         $parts = explode(':', $pageId);
         $lastPart = end($parts);
-        
+
         return ucwords(str_replace(['_', '-'], ' ', $lastPart));
     }
 
@@ -395,7 +395,8 @@ class WikiController extends Controller
             '/href=["\'](?:https?:\/\/[^\/]+)?\/doku\.php\?id=([^"\'&]+)[^"\']*["\']/i',
             function ($matches) {
                 $pageId = urldecode($matches[1]);
-                return 'href="' . route('wiki.show', ['page' => $pageId]) . '"';
+
+                return 'href="'.route('wiki.show', ['page' => $pageId]).'"';
             },
             $content
         );
@@ -405,7 +406,8 @@ class WikiController extends Controller
             '/href=["\'](?:\?id=)([^"\'&]+)[^"\']*["\']/i',
             function ($matches) {
                 $pageId = urldecode($matches[1]);
-                return 'href="' . route('wiki.show', ['page' => $pageId]) . '"';
+
+                return 'href="'.route('wiki.show', ['page' => $pageId]).'"';
             },
             $content
         );
@@ -415,7 +417,8 @@ class WikiController extends Controller
             '/href=["\'](?:\.\/)?doku\.php\?id=([^"\'&]+)[^"\']*["\']/i',
             function ($matches) {
                 $pageId = urldecode($matches[1]);
-                return 'href="' . route('wiki.show', ['page' => $pageId]) . '"';
+
+                return 'href="'.route('wiki.show', ['page' => $pageId]).'"';
             },
             $content
         );
@@ -426,31 +429,31 @@ class WikiController extends Controller
             function ($matches) {
                 $action = $matches[1];
                 $pageId = urldecode($matches[2]);
-                
+
                 // For now, just redirect to the page view
                 // You could extend this to handle edit links differently
-                return 'href="' . route('wiki.show', ['page' => $pageId]) . '"';
+                return 'href="'.route('wiki.show', ['page' => $pageId]).'"';
             },
             $content
         );
 
         // Transform image URLs - Simply replace the path, keep all parameters
         $originalContent = $content;
-        
+
         // Pattern 1: Full URLs with domain
         $content = preg_replace(
             '/src=["\']https?:\/\/[^\/]+\/lib\/exe\/fetch\.php\?/i',
             'src="/wiki/fetch?',
             $content
         );
-        
+
         // Pattern 2: Relative URLs
         $content = preg_replace(
             '/src=["\']\/lib\/exe\/fetch\.php\?/i',
             'src="/wiki/fetch?',
             $content
         );
-        
+
         if ($originalContent !== $content) {
             \Log::info('Image URLs were transformed using simple path replacement');
         } else {
@@ -462,7 +465,8 @@ class WikiController extends Controller
             '/src=["\'](?:https?:\/\/[^\/]+)?\/(?:_media\/|media\/)([^"\']+)["\']/i',
             function ($matches) {
                 $imagePath = urldecode($matches[1]);
-                return 'src="' . route('wiki.image', ['imagePath' => $imagePath]) . '"';
+
+                return 'src="'.route('wiki.image', ['imagePath' => $imagePath]).'"';
             },
             $content
         );
@@ -476,15 +480,21 @@ class WikiController extends Controller
                     $imagePath = $params['media'];
                     // Pass through relevant parameters
                     $proxyParams = [];
-                    if (isset($params['w'])) $proxyParams['w'] = $params['w'];
-                    if (isset($params['h'])) $proxyParams['h'] = $params['h'];
-                    
-                    $url = route('wiki.image', ['imagePath' => $imagePath]);
-                    if (!empty($proxyParams)) {
-                        $url .= '?' . http_build_query($proxyParams);
+                    if (isset($params['w'])) {
+                        $proxyParams['w'] = $params['w'];
                     }
-                    return 'url("' . $url . '")';
+                    if (isset($params['h'])) {
+                        $proxyParams['h'] = $params['h'];
+                    }
+
+                    $url = route('wiki.image', ['imagePath' => $imagePath]);
+                    if (! empty($proxyParams)) {
+                        $url .= '?'.http_build_query($proxyParams);
+                    }
+
+                    return 'url("'.$url.'")';
                 }
+
                 return $matches[0]; // Return original if no media parameter
             },
             $content
@@ -493,73 +503,72 @@ class WikiController extends Controller
         return $content;
     }
 
-
     private function extractH1Title(string $content): array
     {
         // Pattern to match the first h1 tag and capture its content
         $pattern = '/<h1[^>]*>(.*?)<\/h1>/i';
-        
+
         if (preg_match($pattern, $content, $matches)) {
             // Extract the title text and strip any HTML tags
             $title = strip_tags($matches[1]);
-            
+
             // Decode HTML entities (e.g., &#039; becomes ')
             $title = html_entity_decode($title, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-            
+
             // Remove the first h1 from content
             $contentWithoutH1 = preg_replace($pattern, '', $content, 1);
-            
+
             return [
                 'title' => trim($title),
-                'content' => $contentWithoutH1
+                'content' => $contentWithoutH1,
             ];
         }
-        
+
         // No h1 found, return original content with null title
         return [
             'title' => null,
-            'content' => $content
+            'content' => $content,
         ];
     }
 
     private function generateBreadcrumbs(string $pageId, ?string $pageTitle = null): array
     {
         $breadcrumbs = [];
-        
+
         if ($pageId === 'start' || $pageId === 'index') {
             // For the main wiki page, just return empty breadcrumbs
             return $breadcrumbs;
         }
-        
+
         // Split the page ID into parts
         $parts = explode(':', $pageId);
-        
+
         // Special handling for index pages - skip the 'index' part and use page titles
         if (end($parts) === 'index') {
             array_pop($parts); // Remove 'index' from parts
-            
+
             // For index pages, we want to show actual page titles from database
             $currentPath = '';
             foreach ($parts as $index => $part) {
-                $currentPath = $currentPath ? $currentPath . ':' . $part : $part;
+                $currentPath = $currentPath ? $currentPath.':'.$part : $part;
                 $isLast = $index === count($parts) - 1;
-                
+
                 if ($isLast && $pageTitle) {
                     // Use the provided page title for the last part
                     $title = $pageTitle;
                 } else {
                     // Try to get the title from the database for this namespace
-                    $indexPageId = $currentPath . ':index';
+                    $indexPageId = $currentPath.':index';
                     $pageModel = Page::findByPageId($indexPageId);
-                    
-                    if ($pageModel && $pageModel->title && !$this->isGenericTitle($pageModel->title)) {
+
+                    if ($pageModel && $pageModel->title && ! $this->isGenericTitle($pageModel->title)) {
                         $title = $pageModel->title;
                     } else {
                         // Fallback to intelligent formatting
                         $title = $this->generateSmartBreadcrumbTitle($currentPath, $part);
                     }
                 }
-                
+
                 // Only add href for non-last items
                 $breadcrumbs[] = [
                     'title' => $title,
@@ -570,23 +579,23 @@ class WikiController extends Controller
             // Normal page handling (non-index pages)
             $currentPath = '';
             foreach ($parts as $index => $part) {
-                $currentPath = $currentPath ? $currentPath . ':' . $part : $part;
+                $currentPath = $currentPath ? $currentPath.':'.$part : $part;
                 $isLast = $index === count($parts) - 1;
-                
+
                 // For the last part, use the page title if available
                 if ($isLast && $pageTitle) {
                     $title = $pageTitle;
                 } else {
                     // Try to get title from database
                     $pageModel = Page::findByPageId($currentPath);
-                    if ($pageModel && $pageModel->title && !$this->isGenericTitle($pageModel->title)) {
+                    if ($pageModel && $pageModel->title && ! $this->isGenericTitle($pageModel->title)) {
                         $title = $pageModel->title;
                     } else {
                         // Fallback to intelligent formatting
                         $title = $this->generateSmartBreadcrumbTitle($currentPath, $part);
                     }
                 }
-                
+
                 // Only add href for non-last items (breadcrumbs don't link to current page)
                 $breadcrumbs[] = [
                     'title' => $title,
@@ -594,20 +603,20 @@ class WikiController extends Controller
                 ];
             }
         }
-        
+
         return $breadcrumbs;
     }
 
-    private function showCurrentEurofurence(string $currentEF): \Inertia\Response
+    private function showCurrentEurofurence(string $currentEF): Response
     {
         try {
             // Try to load the ef##:index page first, then fall back to ef##
-            $indexPage = Page::findByPageId($currentEF . ':index');
+            $indexPage = Page::findByPageId($currentEF.':index');
             $mainPage = Page::findByPageId($currentEF);
-            
+
             $pageModel = $indexPage ?: $mainPage;
-            
-            if (!$pageModel || !$pageModel->html_content) {
+
+            if (! $pageModel || ! $pageModel->html_content) {
                 throw new \Exception('Current EF page not found');
             }
 
@@ -619,7 +628,7 @@ class WikiController extends Controller
                 'revision' => $pageModel->revision,
                 'permission' => $pageModel->permission,
             ];
-            
+
             $content = $pageModel->html_content;
             $content = $this->transformDokuWikiLinks($content);
             $extractedData = $this->extractH1Title($content);
@@ -629,7 +638,7 @@ class WikiController extends Controller
 
             // Add historical EFs section to the content
             $historicalSection = $this->generateHistoricalEFsHtml($historicalEFs);
-            $content = $extractedData['content'] . $historicalSection;
+            $content = $extractedData['content'].$historicalSection;
 
             return Inertia::render('Wiki/Page', [
                 'page' => $currentEF,
@@ -659,9 +668,9 @@ class WikiController extends Controller
         $html .= '<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">';
 
         foreach ($historicalEFs as $ef) {
-            $html .= '<a href="' . $ef['url'] . '" class="block p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors">';
-            $html .= '<div class="font-medium text-sm">' . htmlspecialchars($ef['title']) . '</div>';
-            $html .= '<div class="text-xs text-gray-500">EF' . $ef['year'] . '</div>';
+            $html .= '<a href="'.$ef['url'].'" class="block p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors">';
+            $html .= '<div class="font-medium text-sm">'.htmlspecialchars($ef['title']).'</div>';
+            $html .= '<div class="text-xs text-gray-500">EF'.$ef['year'].'</div>';
             $html .= '</a>';
         }
 
@@ -677,6 +686,7 @@ class WikiController extends Controller
     private function isGenericTitle(string $title): bool
     {
         $genericTitles = ['index', 'main', 'home', 'start', 'default'];
+
         return in_array(strtolower(trim($title)), $genericTitles);
     }
 
@@ -687,9 +697,9 @@ class WikiController extends Controller
     {
         // Handle EF-specific patterns
         if (preg_match('/^ef(\d+)$/', $part, $matches)) {
-            return 'EF' . $matches[1];
+            return 'EF'.$matches[1];
         }
-        
+
         // Handle EF subpages with better names
         if (str_starts_with($fullPath, 'ef') && preg_match('/^ef\d+:(.+)/', $fullPath)) {
             $commonMappings = [
@@ -709,35 +719,34 @@ class WikiController extends Controller
                 'theming_experience' => 'Theming & Experience',
                 'vr_department' => 'VR Department',
             ];
-            
+
             if (isset($commonMappings[$part])) {
                 return $commonMappings[$part];
             }
         }
-        
+
         // Handle team namespace
         if (str_starts_with($fullPath, 'team')) {
             // For the 'team' part itself, just return 'Teams'
             if ($part === 'team') {
                 return 'Teams';
             }
-            
+
             $teamMappings = [
                 'it' => 'IT Team',
-                'vr_department' => 'VR Department', 
+                'vr_department' => 'VR Department',
                 'security' => 'Security Team',
                 'photography' => 'Photography Team',
                 'merchandise' => 'Merchandise Team',
                 'registration' => 'Registration Team',
             ];
-            
+
             if (isset($teamMappings[$part])) {
                 return $teamMappings[$part];
             }
         }
-        
+
         // Default formatting: capitalize and replace underscores/dashes with spaces
         return ucfirst(str_replace(['_', '-'], ' ', $part));
     }
-
 }

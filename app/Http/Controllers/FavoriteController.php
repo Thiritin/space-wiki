@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Favorite;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
@@ -45,11 +46,11 @@ class FavoriteController extends Controller
             ]);
 
             return redirect()->back()->with('success', 'Added to favorites');
-        } catch (\Illuminate\Database\QueryException $e) {
+        } catch (QueryException $e) {
             // Handle duplicate key constraint
             if ($e->getCode() === '23000') {
                 throw ValidationException::withMessages([
-                    'page_id' => ['This page is already in your favorites.']
+                    'page_id' => ['This page is already in your favorites.'],
                 ]);
             }
             throw $e;
@@ -67,7 +68,7 @@ class FavoriteController extends Controller
 
         return response()->json([
             'is_favorited' => $favorite !== null,
-            'favorite' => $favorite
+            'favorite' => $favorite,
         ]);
     }
 
@@ -120,11 +121,12 @@ class FavoriteController extends Controller
         if ($favorite) {
             // Remove from favorites
             $favorite->delete();
+
             return redirect()->back();
         } else {
             // Add to favorites
             $nextSortOrder = Favorite::forUser(Auth::id())->max('sort_order') + 1;
-            
+
             Favorite::create([
                 'user_id' => Auth::id(),
                 'page_id' => $request->page_id,

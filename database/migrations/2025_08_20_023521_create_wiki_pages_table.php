@@ -20,7 +20,7 @@ return new class extends Migration
             $table->bigInteger('last_modified')->default(0);
             $table->string('url');
             $table->timestamps();
-            
+
             $table->index(['namespace']);
             $table->index(['last_modified']);
         });

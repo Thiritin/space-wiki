@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Page;
+
 return [
 
     /*
@@ -181,7 +183,7 @@ return [
         ],
         // 'max_total_results' => env('TYPESENSE_MAX_TOTAL_RESULTS', 1000),
         'model-settings' => [
-            \App\Models\Page::class => [
+            Page::class => [
                 'collection-schema' => [
                     'fields' => [
                         [
@@ -215,7 +217,7 @@ return [
                     'default_sorting_field' => 'last_modified',
                 ],
                 'search-parameters' => [
-                    'query_by' => 'title,content'
+                    'query_by' => 'title,content',
                 ],
             ],
         ],

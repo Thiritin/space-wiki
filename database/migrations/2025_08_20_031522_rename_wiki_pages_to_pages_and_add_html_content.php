@@ -15,7 +15,7 @@ return new class extends Migration
         Schema::table('wiki_pages', function (Blueprint $table) {
             $table->longText('html_content')->nullable()->after('content');
         });
-        
+
         // Then rename the table
         Schema::rename('wiki_pages', 'pages');
     }
@@ -27,7 +27,7 @@ return new class extends Migration
     {
         // Reverse the table rename
         Schema::rename('pages', 'wiki_pages');
-        
+
         // Remove the html_content column
         Schema::table('wiki_pages', function (Blueprint $table) {
             $table->dropColumn('html_content');

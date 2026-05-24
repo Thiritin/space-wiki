@@ -2,13 +2,13 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Head, router, useForm } from '@inertiajs/vue3';
-import { AlertCircle, ExternalLink, Star, ArrowUp, History, Calendar, User, FileText, Menu, X, List, ChevronRight, Folder, Search } from 'lucide-vue-next';
-import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { Head, router, useForm } from '@inertiajs/vue3';
+import { AlertCircle, ArrowUp, Calendar, ExternalLink, FileText, Folder, History, List, Menu, Search, Star, User, X } from 'lucide-vue-next';
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 
 defineOptions({
-    layout: AppLayout
+    layout: AppLayout,
 });
 
 interface PageInfo {
@@ -25,17 +25,17 @@ function formatDate(timestamp: number) {
         month: 'long',
         day: 'numeric',
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
     });
 }
 
 function formatFileSize(bytes: number): string {
     if (!bytes) return '0 B';
-    
+
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    
-    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+
+    return Math.round((bytes / Math.pow(1024, i)) * 100) / 100 + ' ' + sizes[i];
 }
 
 const props = defineProps<{
@@ -44,7 +44,7 @@ const props = defineProps<{
     content: string;
     error?: string;
     extractedTitle?: string;
-    subpages?: Array<{id: string, title: string, href?: string, url?: string, type: string, level?: number, isFolder?: boolean}>;
+    subpages?: Array<{ id: string; title: string; href?: string; url?: string; type: string; level?: number; isFolder?: boolean }>;
 }>();
 
 // Favorite functionality
@@ -52,9 +52,9 @@ const isFavorited = ref(false);
 
 // Content sidebar functionality
 const showContentSidebar = ref(false);
-const tableOfContents = ref<Array<{id: string, text: string, level: number}>>([]);
-const subpages = ref<Array<{id: string, title: string, href: string, type: string, level: number, isFolder: boolean}>>([]);
-const recentPages = ref<Array<{id: string, title: string, href: string, visitedAt: Date}>>([]);
+const tableOfContents = ref<Array<{ id: string; text: string; level: number }>>([]);
+const mappedSubpages = ref<Array<{ id: string; title: string; href: string; type: string; level: number; isFolder: boolean }>>([]);
+const recentPages = ref<Array<{ id: string; title: string; href: string; visitedAt: Date }>>([]);
 
 // Search functionality for team:index (dashboard)
 const searchQuery = ref('');
@@ -62,9 +62,11 @@ const searchQuery = ref('');
 function performSearch() {
     if (searchQuery.value.trim()) {
         // Emit event to open search widget with pre-filled query
-        window.dispatchEvent(new CustomEvent('open-search-widget', { 
-            detail: { query: searchQuery.value } 
-        }));
+        window.dispatchEvent(
+            new CustomEvent('open-search-widget', {
+                detail: { query: searchQuery.value },
+            }),
+        );
     } else {
         // Open search widget without query
         window.dispatchEvent(new CustomEvent('open-search-widget'));
@@ -75,7 +77,7 @@ function performSearch() {
 const favoriteForm = useForm({
     page_id: props.page || '',
     page_title: '',
-    page_url: ''
+    page_url: '',
 });
 
 // Check if page is favorited on mount
@@ -87,19 +89,19 @@ onMounted(async () => {
         favoriteForm.page_title = getPageTitle(props.page, props.extractedTitle);
         favoriteForm.page_url = window.location.pathname;
     }
-    
+
     // Wrap tables after content is rendered (mobile only)
     await nextTick();
     wrapTablesWithScrollDiv();
-    
+
     // Extract table of contents and load subpages
     extractTableOfContents();
     loadSubpages();
-    
+
     // Load and add to recent pages
     loadRecentPages();
     addToRecentPages();
-    
+
     // Add resize listener to handle viewport changes
     window.addEventListener('resize', handleResize);
 });
@@ -110,22 +112,32 @@ onUnmounted(() => {
 });
 
 // Watch for content changes and re-wrap tables
-watch(() => props.content, async () => {
-    await nextTick();
-    wrapTablesWithScrollDiv();
-    extractTableOfContents();
-});
+watch(
+    () => props.content,
+    async () => {
+        await nextTick();
+        wrapTablesWithScrollDiv();
+        extractTableOfContents();
+    },
+);
 
 // Watch for page changes and reload subpages
-watch(() => props.page, () => {
-    loadSubpages();
-    addToRecentPages();
-});
+watch(
+    () => props.page,
+    () => {
+        loadSubpages();
+        addToRecentPages();
+    },
+);
 
 // Watch for subpages prop changes
-watch(() => props.subpages, () => {
-    loadSubpages();
-}, { immediate: true });
+watch(
+    () => props.subpages,
+    () => {
+        loadSubpages();
+    },
+    { immediate: true },
+);
 
 // Function to wrap tables with overflow div (mobile/tablet only)
 function wrapTablesWithScrollDiv() {
@@ -135,23 +147,23 @@ function wrapTablesWithScrollDiv() {
         unwrapTables();
         return;
     }
-    
+
     const tables = document.querySelectorAll('.wiki-content table:not(.table-wrapped)');
-    tables.forEach(table => {
+    tables.forEach((table) => {
         // Find the actual wiki-content container and Card
         const wikiContent = table.closest('.wiki-content');
         const card = table.closest('[role="none"]') || table.closest('.min-h-96'); // Card element
-        
+
         // Create wrapper div
         const wrapper = document.createElement('div');
         wrapper.className = 'overflow-x-auto table-scroll-wrapper';
         wrapper.style.margin = '1.5rem 0';
         wrapper.style.width = '100%';
         wrapper.style.boxSizing = 'border-box';
-        
+
         // Try different containers to get the right width
         let maxWidth = '100%';
-        
+
         if (card) {
             const cardRect = card.getBoundingClientRect();
             // Subtract padding (typically 2rem total for CardContent)
@@ -160,12 +172,12 @@ function wrapTablesWithScrollDiv() {
             const contentRect = wikiContent.getBoundingClientRect();
             maxWidth = `${contentRect.width}px`;
         }
-        
+
         wrapper.style.maxWidth = maxWidth;
-        
+
         // Mark table as wrapped
         table.classList.add('table-wrapped');
-        
+
         // Insert wrapper before table and move table into wrapper
         table.parentNode?.insertBefore(wrapper, table);
         wrapper.appendChild(table);
@@ -175,7 +187,7 @@ function wrapTablesWithScrollDiv() {
 // Function to unwrap tables (for desktop)
 function unwrapTables() {
     const wrappers = document.querySelectorAll('.table-scroll-wrapper');
-    wrappers.forEach(wrapper => {
+    wrappers.forEach((wrapper) => {
         const table = wrapper.querySelector('table');
         if (table) {
             // Remove wrapped class
@@ -199,12 +211,12 @@ function handleResize() {
 
 async function checkFavoriteStatus() {
     if (!props.page) return;
-    
+
     try {
         const response = await fetch(`/api/favorites/${encodeURIComponent(props.page)}`, {
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
-            }
+            },
         });
         const data = await response.json();
         isFavorited.value = data.is_favorited;
@@ -215,24 +227,24 @@ async function checkFavoriteStatus() {
 
 function toggleFavorite() {
     if (!props.page || favoriteForm.processing) return;
-    
+
     // Update form data
     favoriteForm.page_id = props.page;
     favoriteForm.page_title = getPageTitle(props.page, props.extractedTitle);
     favoriteForm.page_url = window.location.pathname;
-    
+
     favoriteForm.post('/api/favorites/toggle', {
         preserveScroll: true,
-        onSuccess: (page) => {
+        onSuccess: () => {
             // Extract response data from page props if needed
             isFavorited.value = !isFavorited.value;
-            
+
             // Emit event to update sidebar
             window.dispatchEvent(new CustomEvent('favorites-updated'));
         },
         onError: (errors) => {
             console.error('Failed to toggle favorite:', errors);
-        }
+        },
     });
 }
 
@@ -244,34 +256,33 @@ function getPageTitle(page: string | undefined | null, extractedTitle?: string):
         textarea.innerHTML = extractedTitle;
         return textarea.value;
     }
-    
+
     if (!page) return 'Unknown Page';
-    
+
     const parts = page.split(':');
     const lastPart = parts[parts.length - 1];
-    
+
     // If the last part is 'index', use the previous namespace name
     if (lastPart === 'index' && parts.length > 1) {
         const previousPart = parts[parts.length - 2];
-        return previousPart.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        return previousPart.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
     }
-    
-    // Otherwise use the last part, formatted nicely
-    return lastPart.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-}
 
+    // Otherwise use the last part, formatted nicely
+    return lastPart.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+}
 
 function goUp() {
     if (!props.page) return;
-    
+
     const parts = props.page.split(':');
-    
+
     if (parts.length <= 1) {
         // Already at top level, go to wiki index
         router.visit('/wiki');
         return;
     }
-    
+
     // Remove the last part and go up one level
     if (parts[parts.length - 1] === 'index') {
         // If current page is an index, go to parent namespace
@@ -283,7 +294,7 @@ function goUp() {
         // If not an index, just remove the last part
         parts.pop();
     }
-    
+
     if (parts.length === 0) {
         router.visit('/wiki');
     } else {
@@ -295,27 +306,29 @@ function goUp() {
 // Extract table of contents from rendered content
 async function extractTableOfContents() {
     tableOfContents.value = [];
-    
+
     if (!props.content) return;
-    
+
     await nextTick();
-    
-    const headings = document.querySelectorAll('.wiki-content h1, .wiki-content h2, .wiki-content h3, .wiki-content h4, .wiki-content h5, .wiki-content h6');
-    
+
+    const headings = document.querySelectorAll(
+        '.wiki-content h1, .wiki-content h2, .wiki-content h3, .wiki-content h4, .wiki-content h5, .wiki-content h6',
+    );
+
     headings.forEach((heading, index) => {
         const level = parseInt(heading.tagName.charAt(1));
         const text = heading.textContent?.trim() || '';
         const id = heading.id || `heading-${index}`;
-        
+
         // Add ID if not present
         if (!heading.id) {
             heading.id = id;
         }
-        
+
         tableOfContents.value.push({
             id,
             text,
-            level
+            level,
         });
     });
 }
@@ -323,36 +336,36 @@ async function extractTableOfContents() {
 // Load subpages from props (no AJAX needed)
 function loadSubpages() {
     if (!props.subpages) {
-        subpages.value = [];
+        mappedSubpages.value = [];
         return;
     }
-    
+
     // Check if subpages are hidden due to limit (contains _meta object)
     if (props.subpages._meta && props.subpages._meta.hidden_due_to_limit) {
         // Store the meta information for the UI to handle
-        subpages.value = props.subpages;
+        mappedSubpages.value = props.subpages;
         return;
     }
-    
+
     // Normal array processing
     if (Array.isArray(props.subpages)) {
-        subpages.value = props.subpages.map((page: any) => ({
+        mappedSubpages.value = props.subpages.map((page: any) => ({
             id: page.id,
             title: page.title || formatPageTitle(page.id),
             href: page.href || page.url || route('wiki.show', { page: page.id }),
             type: page.type || 'page',
             level: page.level || 1,
-            isFolder: page.isFolder || false
+            isFolder: page.isFolder || false,
         }));
     } else {
-        subpages.value = [];
+        mappedSubpages.value = [];
     }
 }
 
 function formatPageTitle(pageId: string): string {
     const parts = pageId.split(':');
     const lastPart = parts[parts.length - 1];
-    return lastPart.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    return lastPart.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
 }
 
 function scrollToHeading(headingId: string) {
@@ -371,10 +384,12 @@ function loadRecentPages() {
         const stored = localStorage.getItem('wiki_recent_pages');
         if (stored) {
             const parsed = JSON.parse(stored);
-            recentPages.value = parsed.map((item: any) => ({
-                ...item,
-                visitedAt: new Date(item.visitedAt)
-            })).slice(0, 10);
+            recentPages.value = parsed
+                .map((item: any) => ({
+                    ...item,
+                    visitedAt: new Date(item.visitedAt),
+                }))
+                .slice(0, 10);
         }
     } catch (error) {
         console.error('Failed to load recent pages:', error);
@@ -384,20 +399,20 @@ function loadRecentPages() {
 
 function addToRecentPages() {
     if (!props.page) return;
-    
+
     const currentPage = {
         id: props.page,
         title: getPageTitle(props.page, props.extractedTitle),
         href: window.location.pathname,
-        visitedAt: new Date()
+        visitedAt: new Date(),
     };
 
     // Remove existing entry for this page if it exists
-    recentPages.value = recentPages.value.filter(page => page.id !== currentPage.id);
-    
+    recentPages.value = recentPages.value.filter((page) => page.id !== currentPage.id);
+
     // Add to the beginning
     recentPages.value.unshift(currentPage);
-    
+
     // Keep only the last 10 entries
     recentPages.value = recentPages.value.slice(0, 10);
 
@@ -414,382 +429,351 @@ function addToRecentPages() {
 <template>
     <Head :title="`${getPageTitle(props.page, props.extractedTitle)} - Wiki`" />
 
-        <div class="w-full py-6 sm:px-6 lg:px-8">
-            <div class="px-4 py-6 sm:px-0">
-                <!-- Header -->
-                <div class="mb-6">
-                    <!-- Desktop layout -->
-                    <div class="hidden sm:flex items-center justify-between mb-4">
-                        <div class="flex-1">
-                            <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">
-                                {{ getPageTitle(props.page, props.extractedTitle) }}
-                            </h1>
-                            <!-- Search bar for team:index (dashboard) -->
-                            <div v-if="props.page === 'team:index'" class="flex gap-2 mt-4 max-w-md">
-                                <Input
-                                    v-model="searchQuery"
-                                    placeholder="Search wiki pages..."
-                                    class="flex-1"
-                                    @keyup.enter="performSearch"
-                                />
-                                <Button @click="performSearch" class="flex items-center gap-2">
-                                    <Search class="h-4 w-4" />
-                                    Search
-                                </Button>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center gap-2">
-                            <!-- Favorite button (icon only) -->
-                            <Button 
-                                v-if="props.page"
-                                @click="toggleFavorite"
-                                :disabled="favoriteForm.processing"
-                                variant="outline" 
-                                size="sm"
-                                class="flex items-center"
-                                :class="{ 'text-yellow-600 border-yellow-300': isFavorited }"
-                                :title="isFavorited ? 'Remove from favorites' : 'Add to favorites'"
-                            >
-                                <Star 
-                                    class="h-4 w-4" 
-                                    :class="{ 'fill-yellow-400': isFavorited }"
-                                />
-                            </Button>
-
-                            <!-- Open in DokuWiki button -->
-                            <Button 
-                                v-if="props.page"
-                                as="a" 
-                                :href="`https://wiki.eurofurence.org/doku.php?id=${props.page}`"
-                                target="_blank"
-                                variant="outline" 
-                                size="sm"
-                                class="flex items-center gap-2"
-                            >
-                                <ExternalLink class="h-4 w-4" />
-                                <span class="hidden lg:inline">Open in DokuWiki</span>
-                            </Button>
-                        </div>
-                    </div>
-
-                    <!-- Mobile layout -->
-                    <div class="sm:hidden mb-4">
-                        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">
+    <div class="w-full py-6 sm:px-6 lg:px-8">
+        <div class="px-4 py-6 sm:px-0">
+            <!-- Header -->
+            <div class="mb-6">
+                <!-- Desktop layout -->
+                <div class="mb-4 hidden items-center justify-between sm:flex">
+                    <div class="flex-1">
+                        <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">
                             {{ getPageTitle(props.page, props.extractedTitle) }}
                         </h1>
                         <!-- Search bar for team:index (dashboard) -->
-                        <div v-if="props.page === 'team:index'" class="flex gap-2 mb-3">
-                            <Input
-                                v-model="searchQuery"
-                                placeholder="Search wiki pages..."
-                                class="flex-1"
-                                @keyup.enter="performSearch"
-                            />
+                        <div v-if="props.page === 'team:index'" class="mt-4 flex max-w-md gap-2">
+                            <Input v-model="searchQuery" placeholder="Search wiki pages..." class="flex-1" @keyup.enter="performSearch" />
                             <Button @click="performSearch" class="flex items-center gap-2">
                                 <Search class="h-4 w-4" />
                                 Search
                             </Button>
                         </div>
-
-                        <div class="flex items-center gap-2">
-                            <!-- Favorite button (icon only) -->
-                            <Button 
-                                v-if="props.page"
-                                @click="toggleFavorite"
-                                :disabled="favoriteForm.processing"
-                                variant="outline" 
-                                size="sm"
-                                class="flex items-center"
-                                :class="{ 'text-yellow-600 border-yellow-300': isFavorited }"
-                                :title="isFavorited ? 'Remove from favorites' : 'Add to favorites'"
-                            >
-                                <Star 
-                                    class="h-4 w-4" 
-                                    :class="{ 'fill-yellow-400': isFavorited }"
-                                />
-                            </Button>
-
-                            <!-- Open in DokuWiki button -->
-                            <Button 
-                                v-if="props.page"
-                                as="a" 
-                                :href="`https://wiki.eurofurence.org/doku.php?id=${props.page}`"
-                                target="_blank"
-                                variant="outline" 
-                                size="sm"
-                                class="flex items-center"
-                                title="Open in DokuWiki"
-                            >
-                                <ExternalLink class="h-4 w-4" />
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Error Alert -->
-                <div v-if="props.error" class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md flex items-center gap-2">
-                    <AlertCircle class="h-5 w-5 text-red-500 dark:text-red-400" />
-                    <span class="text-red-700 dark:text-red-300">{{ props.error }}</span>
-                </div>
-
-                <!-- Main Content with Sidebar -->
-                <div class="flex gap-6">
-                    <!-- Main Content -->
-                    <div class="flex-1 min-w-0">
-                        <Card class="min-h-96 w-full">
-                            <CardContent>
-                                <div 
-                                    v-if="props.content" 
-                                    class="wiki-content max-w-none"
-                                    v-html="props.content"
-                                ></div>
-                                <div v-else-if="!props.error" class="text-gray-500 text-center py-8">
-                                    This page is empty or does not exist.
-                                </div>
-                            </CardContent>
-                        </Card>
                     </div>
 
-                    <!-- Content Sidebar -->
-                    <div class="hidden lg:block w-80 flex-shrink-0">
-                        <div class="sticky top-6 space-y-4">
-                            <!-- Table of Contents -->
-                            <Card v-if="tableOfContents.length > 0">
-                                <CardHeader>
-                                    <CardTitle class="text-sm flex items-center gap-2">
-                                        <List class="h-4 w-4" />
-                                        Table of Contents
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <nav class="space-y-1">
-                                        <button
-                                            v-for="item in tableOfContents"
-                                            :key="item.id"
-                                            @click="scrollToHeading(item.id)"
-                                            class="block w-full text-left text-sm hover:text-blue-600 transition-colors"
-                                            :class="{
-                                                'ml-0': item.level === 1,
-                                                'ml-4': item.level === 2,
-                                                'ml-8': item.level === 3,
-                                                'ml-12': item.level === 4,
-                                                'ml-16': item.level === 5,
-                                                'ml-20': item.level === 6,
-                                            }"
-                                        >
-                                            {{ item.text }}
-                                        </button>
-                                    </nav>
-                                </CardContent>
-                            </Card>
-
-                            <!-- Subpages -->
-                            <Card v-if="subpages.length > 0 || (subpages._meta && subpages._meta.hidden_due_to_limit)">
-                                <CardHeader>
-                                    <CardTitle class="text-sm flex items-center gap-2">
-                                        <FileText class="h-4 w-4" />
-                                        Subpages
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <!-- Hidden due to limit message -->
-                                    <div v-if="subpages._meta && subpages._meta.hidden_due_to_limit" class="text-center py-4 text-gray-600">
-                                        <FileText class="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                                        <p class="text-sm font-medium">Too many subpages to display</p>
-                                        <p class="text-xs text-gray-500">
-                                            {{ subpages._meta.total_count }} subpages found. Use search to find specific pages.
-                                        </p>
-                                    </div>
-                                    <!-- Normal subpages list -->
-                                    <nav v-else class="space-y-1">
-                                        <a
-                                            v-for="page in subpages"
-                                            :key="page.id"
-                                            :href="page.href"
-                                            class="block text-sm hover:text-blue-600 transition-colors flex items-center gap-2 py-1"
-                                            :class="{ 'ml-4': page.level === 2 }"
-                                        >
-                                            <Folder v-if="page.type === 'folder'" class="h-3 w-3 flex-shrink-0 text-amber-600" />
-                                            <FileText v-else class="h-3 w-3 flex-shrink-0 text-gray-500" />
-                                            <span class="truncate">{{ page.title }}</span>
-                                        </a>
-                                    </nav>
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </div>
-
-                    <!-- Mobile Sidebar Toggle -->
-                    <Button
-                        v-if="tableOfContents.length > 0 || subpages.length > 0"
-                        @click="showContentSidebar = true"
-                        class="lg:hidden fixed bottom-6 right-6 rounded-full w-12 h-12 shadow-lg z-50"
-                        size="sm"
-                    >
-                        <Menu class="h-5 w-5" />
-                    </Button>
-                </div>
-
-                <!-- Mobile Sidebar Drawer -->
-                <div
-                    v-if="showContentSidebar"
-                    class="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-50"
-                    @click="showContentSidebar = false"
-                >
-                    <div
-                        class="fixed right-0 top-0 h-full w-80 bg-white dark:bg-gray-900 shadow-lg transform transition-transform duration-300 ease-in-out overflow-y-auto"
-                        @click.stop
-                    >
-                        <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-                            <div class="flex items-center justify-between">
-                                <h2 class="font-semibold text-gray-900 dark:text-gray-100">Page Navigation</h2>
-                                <Button @click="showContentSidebar = false" variant="ghost" size="sm">
-                                    <X class="h-4 w-4" />
-                                </Button>
-                            </div>
-                        </div>
-
-                        <div class="p-4 space-y-4">
-                            <!-- Table of Contents -->
-                            <Card v-if="tableOfContents.length > 0">
-                                <CardHeader>
-                                    <CardTitle class="text-sm flex items-center gap-2">
-                                        <List class="h-4 w-4" />
-                                        Table of Contents
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <nav class="space-y-1">
-                                        <button
-                                            v-for="item in tableOfContents"
-                                            :key="item.id"
-                                            @click="scrollToHeading(item.id)"
-                                            class="block w-full text-left text-sm hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                                            :class="{
-                                                'ml-0': item.level === 1,
-                                                'ml-4': item.level === 2,
-                                                'ml-8': item.level === 3,
-                                                'ml-12': item.level === 4,
-                                                'ml-16': item.level === 5,
-                                                'ml-20': item.level === 6,
-                                            }"
-                                        >
-                                            {{ item.text }}
-                                        </button>
-                                    </nav>
-                                </CardContent>
-                            </Card>
-
-                            <!-- Subpages -->
-                            <Card v-if="subpages.length > 0 || (subpages._meta && subpages._meta.hidden_due_to_limit)">
-                                <CardHeader>
-                                    <CardTitle class="text-sm flex items-center gap-2">
-                                        <FileText class="h-4 w-4" />
-                                        Subpages
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <!-- Hidden due to limit message -->
-                                    <div v-if="subpages._meta && subpages._meta.hidden_due_to_limit" class="text-center py-4 text-gray-600 dark:text-gray-400">
-                                        <FileText class="h-8 w-8 mx-auto mb-2 text-gray-400 dark:text-gray-500" />
-                                        <p class="text-sm font-medium">Too many subpages to display</p>
-                                        <p class="text-xs text-gray-500 dark:text-gray-400">
-                                            {{ subpages._meta.total_count }} subpages found. Use search to find specific pages.
-                                        </p>
-                                    </div>
-                                    <!-- Normal subpages list -->
-                                    <nav v-else class="space-y-1">
-                                        <a
-                                            v-for="page in subpages"
-                                            :key="page.id"
-                                            :href="page.href"
-                                            class="flex text-sm hover:text-blue-600 dark:hover:text-blue-400 transition-colors items-center gap-2 py-1"
-                                            :class="{ 'ml-4': page.level === 2 }"
-                                        >
-                                            <Folder v-if="page.type === 'folder'" class="h-3 w-3 flex-shrink-0 text-amber-600 dark:text-amber-500" />
-                                            <FileText v-else class="h-3 w-3 flex-shrink-0 text-gray-500 dark:text-gray-400" />
-                                            <span class="truncate">{{ page.title }}</span>
-                                        </a>
-                                    </nav>
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Page Footer -->
-                <div v-if="props.page && !props.error" class="mt-8 space-y-4">
-                    <!-- Action Buttons -->
-                    <div class="flex flex-wrap items-center gap-3">
+                    <div class="flex items-center gap-2">
+                        <!-- Favorite button (icon only) -->
                         <Button
-                            @click="goUp"
+                            v-if="props.page"
+                            @click="toggleFavorite"
+                            :disabled="favoriteForm.processing"
                             variant="outline"
                             size="sm"
-                            class="flex items-center gap-2"
+                            class="flex items-center"
+                            :class="{ 'border-yellow-300 text-yellow-600': isFavorited }"
+                            :title="isFavorited ? 'Remove from favorites' : 'Add to favorites'"
                         >
-                            <ArrowUp class="h-4 w-4" />
-                            Up
+                            <Star class="h-4 w-4" :class="{ 'fill-yellow-400': isFavorited }" />
                         </Button>
 
+                        <!-- Open in DokuWiki button -->
                         <Button
-                            :href="route('wiki.history', { page: props.page })"
+                            v-if="props.page"
                             as="a"
+                            :href="`https://wiki.eurofurence.org/doku.php?id=${props.page}`"
+                            target="_blank"
                             variant="outline"
                             size="sm"
                             class="flex items-center gap-2"
                         >
-                            <History class="h-4 w-4" />
-                            Page History
+                            <ExternalLink class="h-4 w-4" />
+                            <span class="hidden lg:inline">Open in DokuWiki</span>
+                        </Button>
+                    </div>
+                </div>
+
+                <!-- Mobile layout -->
+                <div class="mb-4 sm:hidden">
+                    <h1 class="mb-3 text-2xl font-bold text-gray-900 dark:text-gray-100">
+                        {{ getPageTitle(props.page, props.extractedTitle) }}
+                    </h1>
+                    <!-- Search bar for team:index (dashboard) -->
+                    <div v-if="props.page === 'team:index'" class="mb-3 flex gap-2">
+                        <Input v-model="searchQuery" placeholder="Search wiki pages..." class="flex-1" @keyup.enter="performSearch" />
+                        <Button @click="performSearch" class="flex items-center gap-2">
+                            <Search class="h-4 w-4" />
+                            Search
                         </Button>
                     </div>
 
-                    <!-- Page Information -->
-                    <Card v-if="props.pageInfo" class="bg-gray-50 dark:bg-gray-800/50">
-                        <CardContent class="p-4">
-                            <h3 class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
-                                <FileText class="h-4 w-4" />
-                                Page Information
-                            </h3>
-                            
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-                                <div class="flex items-center gap-2">
-                                    <Calendar class="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                                    <div>
-                                        <div class="text-gray-600 dark:text-gray-400">Last Modified</div>
-                                        <div class="font-medium">{{ formatDate(props.pageInfo.lastModified) }}</div>
-                                    </div>
-                                </div>
+                    <div class="flex items-center gap-2">
+                        <!-- Favorite button (icon only) -->
+                        <Button
+                            v-if="props.page"
+                            @click="toggleFavorite"
+                            :disabled="favoriteForm.processing"
+                            variant="outline"
+                            size="sm"
+                            class="flex items-center"
+                            :class="{ 'border-yellow-300 text-yellow-600': isFavorited }"
+                            :title="isFavorited ? 'Remove from favorites' : 'Add to favorites'"
+                        >
+                            <Star class="h-4 w-4" :class="{ 'fill-yellow-400': isFavorited }" />
+                        </Button>
 
-                                <div class="flex items-center gap-2">
-                                    <User class="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                                    <div>
-                                        <div class="text-gray-600 dark:text-gray-400">Author</div>
-                                        <div class="font-medium">{{ props.pageInfo.author || 'Unknown' }}</div>
-                                    </div>
-                                </div>
+                        <!-- Open in DokuWiki button -->
+                        <Button
+                            v-if="props.page"
+                            as="a"
+                            :href="`https://wiki.eurofurence.org/doku.php?id=${props.page}`"
+                            target="_blank"
+                            variant="outline"
+                            size="sm"
+                            class="flex items-center"
+                            title="Open in DokuWiki"
+                        >
+                            <ExternalLink class="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
+            </div>
 
-                                <div class="flex items-center gap-2">
-                                    <FileText class="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                                    <div>
-                                        <div class="text-gray-600 dark:text-gray-400">Version</div>
-                                        <div class="font-medium">{{ props.pageInfo.version || 'N/A' }}</div>
-                                    </div>
-                                </div>
+            <!-- Error Alert -->
+            <div
+                v-if="props.error"
+                class="mb-6 flex items-center gap-2 rounded-md border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20"
+            >
+                <AlertCircle class="h-5 w-5 text-red-500 dark:text-red-400" />
+                <span class="text-red-700 dark:text-red-300">{{ props.error }}</span>
+            </div>
 
-                                <div class="flex items-center gap-2">
-                                    <FileText class="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                                    <div>
-                                        <div class="text-gray-600 dark:text-gray-400">Size</div>
-                                        <div class="font-medium">{{ formatFileSize(props.pageInfo.size) }}</div>
-                                    </div>
-                                </div>
-                            </div>
+            <!-- Main Content with Sidebar -->
+            <div class="flex gap-6">
+                <!-- Main Content -->
+                <div class="min-w-0 flex-1">
+                    <Card class="min-h-96 w-full">
+                        <CardContent>
+                            <div v-if="props.content" class="wiki-content max-w-none" v-html="props.content"></div>
+                            <div v-else-if="!props.error" class="py-8 text-center text-gray-500">This page is empty or does not exist.</div>
                         </CardContent>
                     </Card>
                 </div>
+
+                <!-- Content Sidebar -->
+                <div class="hidden w-80 flex-shrink-0 lg:block">
+                    <div class="sticky top-6 space-y-4">
+                        <!-- Table of Contents -->
+                        <Card v-if="tableOfContents.length > 0">
+                            <CardHeader>
+                                <CardTitle class="flex items-center gap-2 text-sm">
+                                    <List class="h-4 w-4" />
+                                    Table of Contents
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <nav class="space-y-1">
+                                    <button
+                                        v-for="item in tableOfContents"
+                                        :key="item.id"
+                                        @click="scrollToHeading(item.id)"
+                                        class="block w-full text-left text-sm transition-colors hover:text-blue-600"
+                                        :class="{
+                                            'ml-0': item.level === 1,
+                                            'ml-4': item.level === 2,
+                                            'ml-8': item.level === 3,
+                                            'ml-12': item.level === 4,
+                                            'ml-16': item.level === 5,
+                                            'ml-20': item.level === 6,
+                                        }"
+                                    >
+                                        {{ item.text }}
+                                    </button>
+                                </nav>
+                            </CardContent>
+                        </Card>
+
+                        <!-- Subpages -->
+                        <Card v-if="mappedSubpages.length > 0 || (mappedSubpages._meta && mappedSubpages._meta.hidden_due_to_limit)">
+                            <CardHeader>
+                                <CardTitle class="flex items-center gap-2 text-sm">
+                                    <FileText class="h-4 w-4" />
+                                    Subpages
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <!-- Hidden due to limit message -->
+                                <div v-if="mappedSubpages._meta && mappedSubpages._meta.hidden_due_to_limit" class="py-4 text-center text-gray-600">
+                                    <FileText class="mx-auto mb-2 h-8 w-8 text-gray-400" />
+                                    <p class="text-sm font-medium">Too many subpages to display</p>
+                                    <p class="text-xs text-gray-500">
+                                        {{ mappedSubpages._meta.total_count }} subpages found. Use search to find specific pages.
+                                    </p>
+                                </div>
+                                <!-- Normal subpages list -->
+                                <nav v-else class="space-y-1">
+                                    <a
+                                        v-for="page in mappedSubpages"
+                                        :key="page.id"
+                                        :href="page.href"
+                                        class="block flex items-center gap-2 py-1 text-sm transition-colors hover:text-blue-600"
+                                        :class="{ 'ml-4': page.level === 2 }"
+                                    >
+                                        <Folder v-if="page.type === 'folder'" class="h-3 w-3 flex-shrink-0 text-amber-600" />
+                                        <FileText v-else class="h-3 w-3 flex-shrink-0 text-gray-500" />
+                                        <span class="truncate">{{ page.title }}</span>
+                                    </a>
+                                </nav>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+
+                <!-- Mobile Sidebar Toggle -->
+                <Button
+                    v-if="tableOfContents.length > 0 || mappedSubpages.length > 0"
+                    @click="showContentSidebar = true"
+                    class="fixed right-6 bottom-6 z-50 h-12 w-12 rounded-full shadow-lg lg:hidden"
+                    size="sm"
+                >
+                    <Menu class="h-5 w-5" />
+                </Button>
+            </div>
+
+            <!-- Mobile Sidebar Drawer -->
+            <div v-if="showContentSidebar" class="bg-opacity-50 fixed inset-0 z-50 bg-black lg:hidden" @click="showContentSidebar = false">
+                <div
+                    class="fixed top-0 right-0 h-full w-80 transform overflow-y-auto bg-white shadow-lg transition-transform duration-300 ease-in-out dark:bg-gray-900"
+                    @click.stop
+                >
+                    <div class="border-b border-gray-200 p-4 dark:border-gray-700">
+                        <div class="flex items-center justify-between">
+                            <h2 class="font-semibold text-gray-900 dark:text-gray-100">Page Navigation</h2>
+                            <Button @click="showContentSidebar = false" variant="ghost" size="sm">
+                                <X class="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4 p-4">
+                        <!-- Table of Contents -->
+                        <Card v-if="tableOfContents.length > 0">
+                            <CardHeader>
+                                <CardTitle class="flex items-center gap-2 text-sm">
+                                    <List class="h-4 w-4" />
+                                    Table of Contents
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <nav class="space-y-1">
+                                    <button
+                                        v-for="item in tableOfContents"
+                                        :key="item.id"
+                                        @click="scrollToHeading(item.id)"
+                                        class="block w-full text-left text-sm transition-colors hover:text-blue-600 dark:hover:text-blue-400"
+                                        :class="{
+                                            'ml-0': item.level === 1,
+                                            'ml-4': item.level === 2,
+                                            'ml-8': item.level === 3,
+                                            'ml-12': item.level === 4,
+                                            'ml-16': item.level === 5,
+                                            'ml-20': item.level === 6,
+                                        }"
+                                    >
+                                        {{ item.text }}
+                                    </button>
+                                </nav>
+                            </CardContent>
+                        </Card>
+
+                        <!-- Subpages -->
+                        <Card v-if="mappedSubpages.length > 0 || (mappedSubpages._meta && mappedSubpages._meta.hidden_due_to_limit)">
+                            <CardHeader>
+                                <CardTitle class="flex items-center gap-2 text-sm">
+                                    <FileText class="h-4 w-4" />
+                                    Subpages
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <!-- Hidden due to limit message -->
+                                <div
+                                    v-if="mappedSubpages._meta && mappedSubpages._meta.hidden_due_to_limit"
+                                    class="py-4 text-center text-gray-600 dark:text-gray-400"
+                                >
+                                    <FileText class="mx-auto mb-2 h-8 w-8 text-gray-400 dark:text-gray-500" />
+                                    <p class="text-sm font-medium">Too many subpages to display</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                                        {{ mappedSubpages._meta.total_count }} subpages found. Use search to find specific pages.
+                                    </p>
+                                </div>
+                                <!-- Normal subpages list -->
+                                <nav v-else class="space-y-1">
+                                    <a
+                                        v-for="page in mappedSubpages"
+                                        :key="page.id"
+                                        :href="page.href"
+                                        class="flex items-center gap-2 py-1 text-sm transition-colors hover:text-blue-600 dark:hover:text-blue-400"
+                                        :class="{ 'ml-4': page.level === 2 }"
+                                    >
+                                        <Folder v-if="page.type === 'folder'" class="h-3 w-3 flex-shrink-0 text-amber-600 dark:text-amber-500" />
+                                        <FileText v-else class="h-3 w-3 flex-shrink-0 text-gray-500 dark:text-gray-400" />
+                                        <span class="truncate">{{ page.title }}</span>
+                                    </a>
+                                </nav>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page Footer -->
+            <div v-if="props.page && !props.error" class="mt-8 space-y-4">
+                <!-- Action Buttons -->
+                <div class="flex flex-wrap items-center gap-3">
+                    <Button @click="goUp" variant="outline" size="sm" class="flex items-center gap-2">
+                        <ArrowUp class="h-4 w-4" />
+                        Up
+                    </Button>
+
+                    <Button :href="route('wiki.history', { page: props.page })" as="a" variant="outline" size="sm" class="flex items-center gap-2">
+                        <History class="h-4 w-4" />
+                        Page History
+                    </Button>
+                </div>
+
+                <!-- Page Information -->
+                <Card v-if="props.pageInfo" class="bg-gray-50 dark:bg-gray-800/50">
+                    <CardContent class="p-4">
+                        <h3 class="mb-3 flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-gray-100">
+                            <FileText class="h-4 w-4" />
+                            Page Information
+                        </h3>
+
+                        <div class="grid grid-cols-1 gap-4 text-sm md:grid-cols-2 lg:grid-cols-4">
+                            <div class="flex items-center gap-2">
+                                <Calendar class="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                                <div>
+                                    <div class="text-gray-600 dark:text-gray-400">Last Modified</div>
+                                    <div class="font-medium">{{ formatDate(props.pageInfo.lastModified) }}</div>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <User class="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                                <div>
+                                    <div class="text-gray-600 dark:text-gray-400">Author</div>
+                                    <div class="font-medium">{{ props.pageInfo.author || 'Unknown' }}</div>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <FileText class="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                                <div>
+                                    <div class="text-gray-600 dark:text-gray-400">Version</div>
+                                    <div class="font-medium">{{ props.pageInfo.version || 'N/A' }}</div>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <FileText class="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                                <div>
+                                    <div class="text-gray-600 dark:text-gray-400">Size</div>
+                                    <div class="font-medium">{{ formatFileSize(props.pageInfo.size) }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
         </div>
+    </div>
 </template>
 
 <style>
@@ -995,7 +979,7 @@ function addToRecentPages() {
         table-layout: fixed;
         width: 100%;
     }
-    
+
     .wiki-content th,
     .wiki-content td {
         word-wrap: break-word;
@@ -1173,41 +1157,41 @@ function addToRecentPages() {
     .wiki-content {
         font-size: 14px;
     }
-    
+
     .wiki-content h1 {
         font-size: 2rem;
         margin: 1.5rem 0 1rem 0;
     }
-    
+
     .wiki-content h2 {
         font-size: 1.5rem;
         margin: 1.25rem 0 0.75rem 0;
     }
-    
+
     .wiki-content h3 {
         font-size: 1.25rem;
         margin: 1rem 0 0.5rem 0;
     }
-    
+
     .wiki-content table {
         font-size: 0.875rem;
     }
-    
+
     .wiki-content th,
     .wiki-content td {
         padding: 0.5rem 0.75rem;
     }
-    
+
     .wiki-content pre {
         padding: 1rem;
         font-size: 0.75rem;
     }
-    
+
     .wiki-content blockquote {
         padding: 0.75rem 1rem;
         margin: 1rem 0;
     }
-    
+
     .wiki-content ul,
     .wiki-content ol {
         padding-left: 1.5rem;
@@ -1219,15 +1203,15 @@ function addToRecentPages() {
     .wiki-content {
         font-size: 13px;
     }
-    
+
     .wiki-content h1 {
         font-size: 1.75rem;
     }
-    
+
     .wiki-content h2 {
         font-size: 1.375rem;
     }
-    
+
     .wiki-content table {
         font-size: 0.75rem;
     }
